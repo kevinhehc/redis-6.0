@@ -4889,6 +4889,7 @@ int linuxMadvFreeForkBugCheck(void) {
     }
 
     /* Fork the process. */
+    // fork 进程
     pid = fork();
     if (pid < 0) {
         serverLog(LL_WARNING, "Failed to fork: %s", strerror(errno));
@@ -4945,6 +4946,7 @@ void createPidFile(void) {
 void daemonize(void) {
     int fd;
 
+    // fork 进程
     if (fork() != 0) exit(0); /* parent exits */
     setsid(); /* create a new session */
 
@@ -5119,6 +5121,7 @@ void closeClildUnusedResourceAfterFork() {
 int redisFork(int purpose) {
     int childpid;
     long long start = ustime();
+    // fork 进程
     if ((childpid = fork()) == 0) {
         /* Child */
         server.in_fork_child = purpose;

@@ -788,6 +788,7 @@ void sentinelRunPendingScripts(void) {
         sj->flags |= SENTINEL_SCRIPT_RUNNING;
         sj->start_time = mstime();
         sj->retry_num++;
+        // fork 进程
         pid = fork();
 
         if (pid == -1) {

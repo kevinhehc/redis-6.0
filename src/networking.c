@@ -1991,6 +1991,7 @@ void processInputBuffer(client *c) {
             /* If the Gopher mode and we got zero or one argument, process
              * the request in Gopher mode. To avoid data race, Redis won't
              * support Gopher if enable io threads to read queries. */
+            // 前提是配置了 io 线程进行读写
             if (server.gopher_enabled && !server.io_threads_do_reads &&
                 ((c->argc == 1 && ((char*)(c->argv[0]->ptr))[0] == '/') ||
                   c->argc == 0))
@@ -2035,6 +2036,7 @@ void processInputBuffer(client *c) {
     }
 }
 
+// 2. 从客户端读
 void readQueryFromClient(connection *conn) {
     client *c = connGetPrivateData(conn);
     int nread, readlen;
@@ -2042,6 +2044,7 @@ void readQueryFromClient(connection *conn) {
 
     /* Check if we want to read from the client later when exiting from
      * the event loop. This is the case if threaded I/O is enabled. */
+    // 是否推迟读，如果是的话 ，会把client句柄添加到 server.clients_pending_read 队列
     if (postponeClientRead(c)) return;
 
     /* Update total number of reads on server */
@@ -3077,6 +3080,7 @@ int io_threads_op;      /* IO_THREADS_OP_WRITE or IO_THREADS_OP_READ. */
  * itself. */
 list *io_threads_list[IO_THREADS_MAX_NUM];
 
+// 1. IO 线程的要入口
 void *IOThreadMain(void *myid) {
     /* The ID is the thread number (from 0 to server.iothreads_num-1), and is
      * used by the thread to just manipulate a single sub-array of clients. */
@@ -3112,6 +3116,7 @@ void *IOThreadMain(void *myid) {
         listRewind(io_threads_list[id],&li);
         while((ln = listNext(&li))) {
             client *c = listNodeValue(ln);
+            // 判断 io_threads_op 是读还是写
             if (io_threads_op == IO_THREADS_OP_WRITE) {
                 writeToClient(c,0);
             } else if (io_threads_op == IO_THREADS_OP_READ) {
@@ -3209,6 +3214,7 @@ void stopThreadedIO(void) {
  * The function returns 0 if the I/O threading should be used because there
  * are enough active threads, otherwise 1 is returned and the I/O threads
  * could be possibly stopped (if already active) as a side effect. */
+// 如果需要的话就停止 io 线程
 int stopThreadedIOIfNeeded(void) {
     int pending = listLength(server.clients_pending_write);
 
@@ -3223,17 +3229,20 @@ int stopThreadedIOIfNeeded(void) {
     }
 }
 
+// 使用 io 线程处理等待写的客户端
 int handleClientsWithPendingWritesUsingThreads(void) {
     int processed = listLength(server.clients_pending_write);
     if (processed == 0) return 0; /* Return ASAP if there are no clients. */
 
     /* If I/O threads are disabled or we have few clients to serve, don't
      * use I/O threads, but thejboring synchronous code. */
+    // 判断是否有必要开启IO多线程
     if (server.io_threads_num == 1 || stopThreadedIOIfNeeded()) {
         return handleClientsWithPendingWrites();
     }
 
     /* Start threads if needed. */
+    // 开启io多线程
     if (!server.io_threads_active) startThreadedIO();
 
     if (tio_debug) printf("%d TOTAL WRITE pending clients\n", processed);
@@ -3241,19 +3250,31 @@ int handleClientsWithPendingWritesUsingThreads(void) {
     /* Distribute the clients across N different lists. */
     listIter li;
     listNode *ln;
+    // 创建一个迭代器li，用于遍历任务队列clients_pending_write
     listRewind(server.clients_pending_write,&li);
+    // 默认是0，先分配给主线程去做（生产者也可能是消费者），如果设置成1，则先让io线程1去做
     int item_id = 0;
+    // io_threads_list[0] 主线程
+    // io_threads_list[1] io线程
+    // io_threads_list[2] io线程
+    // io_threads_list[3] io线程
+    // io_threads_list[4] io线程
     while((ln = listNext(&li))) {
+        // 取出一个任务
         client *c = listNodeValue(ln);
         c->flags &= ~CLIENT_PENDING_WRITE;
 
         /* Remove clients from the list of pending writes since
          * they are going to be closed ASAP. */
+        // 表示该客户端的输出缓冲区超过了服务器允许范围,将在下一次循环进行一个关闭,也不返回任何信息给客户端，删除待读客户端
         if (c->flags & CLIENT_CLOSE_ASAP) {
             listDelNode(server.clients_pending_write, ln);
             continue;
         }
 
+        // 负载均衡：将任务队列中的任务 添加 到不同的线程消费队列中去，每个线程就可以从当前线程的消费队列中取任务就行了
+        // 这样做的好处是，避免加锁。当前是在主线程中，进行分配任务
+        // 通过取余操作，将任务均分给不同io线程
         int target_id = item_id % server.io_threads_num;
         listAddNodeTail(io_threads_list[target_id],c);
         item_id++;
@@ -3264,10 +3285,12 @@ int handleClientsWithPendingWritesUsingThreads(void) {
     io_threads_op = IO_THREADS_OP_WRITE;
     for (int j = 1; j < server.io_threads_num; j++) {
         int count = listLength(io_threads_list[j]);
+        // 设置io线程启动条件，启动io线程
         io_threads_pending[j] = count;
     }
 
     /* Also use the main thread to process a slice of clients. */
+    // 让主线程去处理一部分任务（io_threads_list[0]）
     listRewind(io_threads_list[0],&li);
     while((ln = listNext(&li))) {
         client *c = listNodeValue(ln);
@@ -3276,9 +3299,11 @@ int handleClientsWithPendingWritesUsingThreads(void) {
     listEmpty(io_threads_list[0]);
 
     /* Wait for all the other threads to end their work. */
+    // 剩下的任务io_threads_list[1]，io_threads_list[2].....给io线程去做，等待io线程完成任务
     while(1) {
         unsigned long pending = 0;
         for (int j = 1; j < server.io_threads_num; j++)
+            // 等待io线程结束，并返回处理的数量
             pending += io_threads_pending[j];
         if (pending == 0) break;
     }
@@ -3310,6 +3335,7 @@ int handleClientsWithPendingWritesUsingThreads(void) {
  * This is called by the readable handler of the event loop.
  * As a side effect of calling this function the client is put in the
  * pending read clients and flagged as such. */
+// 推迟客户端读
 int postponeClientRead(client *c) {
     if (server.io_threads_active &&
         server.io_threads_do_reads &&
@@ -3331,7 +3357,9 @@ int postponeClientRead(client *c) {
  * the queue using the I/O threads, and process them in order to accumulate
  * the reads in the buffers, and also parse the first command available
  * rendering it in the client structures. */
+// 使用 io 线程处理等待读的客户端
 int handleClientsWithPendingReadsUsingThreads(void) {
+    // 前提是 io 线程激活了而且 io 线程 配置了读写
     if (!server.io_threads_active || !server.io_threads_do_reads) return 0;
     int processed = listLength(server.clients_pending_read);
     if (processed == 0) return 0;

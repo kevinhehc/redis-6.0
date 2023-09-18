@@ -32,6 +32,7 @@
 
 /* Exported API */
 void bioInit(void);
+// 异步关闭文件
 void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3);
 unsigned long long bioPendingJobsOfType(int type);
 unsigned long long bioWaitStepOfType(int type);
@@ -39,9 +40,11 @@ time_t bioOlderJobOfType(int type);
 void bioKillThreads(void);
 
 /* Background job opcodes */
-#define BIO_CLOSE_FILE    0 /* Deferred close(2) syscall. */
-#define BIO_AOF_FSYNC     1 /* Deferred AOF fsync. */
-#define BIO_LAZY_FREE     2 /* Deferred objects freeing. */
-#define BIO_NUM_OPS       3
+#define BIO_CLOSE_FILE    0 /* Deferred close(2) syscall. */ // 处理延迟关闭文件任务队列，因为这个是耗时操作
+#define BIO_AOF_FSYNC     1 /* Deferred AOF fsync. */ // 处理 AOF 文件异步刷盘任务队列 ，因为这个是耗时操作
+#define BIO_LAZY_FREE     2 /* Deferred objects freeing. */ // 处理 unlink 命令的任务队列，如果是大 key，删除也是耗时操作
+#define BIO_NUM_OPS       3 // 定义了异步线程数量 3 个
 
+// Redis 在 2.6 版本，会启动 2 个后台线程，分别处理关闭文件、AOF 刷盘这两个任务
+// Redis 在 4.0 版本之后，新增了 BIO_LAZY_FREE 后台线程
 #endif

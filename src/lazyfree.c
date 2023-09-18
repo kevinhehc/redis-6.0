@@ -98,6 +98,7 @@ int dbAsyncDelete(redisDb *db, robj *key) {
          * equivalent to just calling decrRefCount(). */
         if (free_effort > LAZYFREE_THRESHOLD && val->refcount == 1) {
             atomicIncr(lazyfree_objects,1);
+            // 异步释放内存的处理
             bioCreateBackgroundJob(BIO_LAZY_FREE,val,NULL,NULL);
             dictSetVal(db->dict,de,NULL);
         }
@@ -119,6 +120,7 @@ void freeObjAsync(robj *o) {
     size_t free_effort = lazyfreeGetFreeEffort(o);
     if (free_effort > LAZYFREE_THRESHOLD && o->refcount == 1) {
         atomicIncr(lazyfree_objects,1);
+        // 异步释放内存的处理
         bioCreateBackgroundJob(BIO_LAZY_FREE,o,NULL,NULL);
     } else {
         decrRefCount(o);
@@ -133,12 +135,14 @@ void emptyDbAsync(redisDb *db) {
     db->dict = dictCreate(&dbDictType,NULL);
     db->expires = dictCreate(&keyptrDictType,NULL);
     atomicIncr(lazyfree_objects,dictSize(oldht1));
+    // 异步释放内存的处理
     bioCreateBackgroundJob(BIO_LAZY_FREE,NULL,oldht1,oldht2);
 }
 
 /* Release the radix tree mapping Redis Cluster keys to slots asynchronously. */
 void freeSlotsToKeysMapAsync(rax *rt) {
     atomicIncr(lazyfree_objects,rt->numele);
+    // 异步释放内存的处理
     bioCreateBackgroundJob(BIO_LAZY_FREE,NULL,NULL,rt);
 }
 

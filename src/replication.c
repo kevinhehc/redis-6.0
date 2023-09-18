@@ -102,6 +102,7 @@ int bg_unlink(const char *filename) {
             errno = old_errno;
             return -1;
         }
+        // 异步关闭文件
         bioCreateBackgroundJob(BIO_CLOSE_FILE,(void*)(long)fd,NULL,NULL);
         return 0; /* Success. */
     }
@@ -1752,6 +1753,7 @@ void readSyncBulkPayload(connection *conn) {
             return;
         }
         /* Close old rdb asynchronously. */
+        // 异步关闭老的 AOF 文件
         if (old_rdb_fd != -1) bioCreateBackgroundJob(BIO_CLOSE_FILE,(void*)(long)old_rdb_fd,NULL,NULL);
 
         if (rdbLoad(server.rdb_filename,&rsi,RDBFLAGS_REPLICATION) != C_OK) {

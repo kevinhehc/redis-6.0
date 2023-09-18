@@ -93,6 +93,7 @@ void lazyfreeFreeSlotsMapFromBioThread(zskiplist *sl);
 #define REDIS_THREAD_STACK_SIZE (1024*1024*4)
 
 /* Initialize the background system, spawning the thread. */
+// 初始化后台线程
 void bioInit(void) {
     pthread_attr_t attr;
     pthread_t thread;
@@ -100,6 +101,7 @@ void bioInit(void) {
     int j;
 
     /* Initialization of state vars and objects */
+    // 根据 BIO_NUM_OPS 的数值，然后遍历执行 mutex cond 等相关的初始化
     for (j = 0; j < BIO_NUM_OPS; j++) {
         pthread_mutex_init(&bio_mutex[j],NULL);
         pthread_cond_init(&bio_newjob_cond[j],NULL);
@@ -118,6 +120,7 @@ void bioInit(void) {
     /* Ready to spawn our threads. We use the single argument the thread
      * function accepts in order to pass the job ID the thread is
      * responsible of. */
+    // 根据 BIO_NUM_OPS 的数值，真正的调用 pthread_create 创建线程
     for (j = 0; j < BIO_NUM_OPS; j++) {
         void *arg = (void*)(unsigned long) j;
         if (pthread_create(&thread,&attr,bioProcessBackgroundJobs,arg) != 0) {
@@ -128,6 +131,9 @@ void bioInit(void) {
     }
 }
 
+// 创建后台任务
+// type 任务类型，对应的是 BIO_CLOSE_FILE， BIO_AOF_FSYNC， BIO_LAZY_FREE
+// arg1 arg2 arg3 三个散列参数，不指定类型，动态的
 void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     struct bio_job *job = zmalloc(sizeof(*job));
 
@@ -142,6 +148,7 @@ void bioCreateBackgroundJob(int type, void *arg1, void *arg2, void *arg3) {
     pthread_mutex_unlock(&bio_mutex[type]);
 }
 
+// 处理后台任务
 void *bioProcessBackgroundJobs(void *arg) {
     struct bio_job *job;
     unsigned long type = (unsigned long) arg;
@@ -166,6 +173,7 @@ void *bioProcessBackgroundJobs(void *arg) {
         break;
     }
 
+    // cpu亲和性，如果固定了，在只跑 redis 的物理机器上其实是有一定的收益的
     redisSetCpuAffinity(server.bio_cpulist);
 
     makeThreadKillable();
@@ -227,6 +235,7 @@ void *bioProcessBackgroundJobs(void *arg) {
 }
 
 /* Return the number of pending jobs of the specified type. */
+// 返回指定类型任务的阻塞数量
 unsigned long long bioPendingJobsOfType(int type) {
     unsigned long long val;
     pthread_mutex_lock(&bio_mutex[type]);
@@ -261,6 +270,7 @@ unsigned long long bioWaitStepOfType(int type) {
  * used only when it's critical to stop the threads for some reason.
  * Currently Redis does this only on crash (for instance on SIGSEGV) in order
  * to perform a fast memory check without other threads messing with memory. */
+// 任务关闭
 void bioKillThreads(void) {
     int err, j;
 
