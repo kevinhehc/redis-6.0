@@ -631,13 +631,21 @@ typedef struct RedisModuleDigest {
 #define OBJ_SHARED_REFCOUNT INT_MAX     /* Global object never destroyed. */
 #define OBJ_STATIC_REFCOUNT (INT_MAX-1) /* Object allocated in the stack. */
 #define OBJ_FIRST_SPECIAL_REFCOUNT OBJ_STATIC_REFCOUNT
+/*
+ * Redis 对象
+ */
 typedef struct redisObject {
+    // 类型
     unsigned type:4;
+    // 编码方式
     unsigned encoding:4;
+    // LRU 时间（相对于 server.lruclock）
     unsigned lru:LRU_BITS; /* LRU time (relative to global lru_clock) or
                             * LFU data (least significant 8 bits frequency
                             * and most significant 16 bits access time). */
+    // 引用计数
     int refcount;
+    // 指向对象的值
     void *ptr;
 } robj;
 
@@ -650,6 +658,9 @@ char *getObjectTypeName(robj*);
  * Note that this macro is taken near the structure definition to make sure
  * we'll update it when the structure is changed, to avoid bugs like
  * bug #85 introduced exactly in this way. */
+/*
+ * 初始化一个从栈上分配的 Redis Object
+ */
 #define initStaticStringObject(_var,_ptr) do { \
     _var.refcount = OBJ_STATIC_REFCOUNT; \
     _var.type = OBJ_STRING; \
@@ -669,12 +680,21 @@ typedef struct clientReplyBlock {
 /* Redis database representation. There are multiple databases identified
  * by integers from 0 (the default database) up to the max configured
  * database. The database number is the 'id' field in the structure. */
+/*
+ * 数据库结构
+ */
 typedef struct redisDb {
+    // key space，包括键值对象
     dict *dict;                 /* The keyspace for this DB */
+    // 保存 key 的过期时间
     dict *expires;              /* Timeout of keys with a timeout set */
+    // 正因为某个/某些 key 而被阻塞的客户端
     dict *blocking_keys;        /* Keys with clients waiting for data (BLPOP)*/
+    // 某个/某些接收到 PUSH 命令的阻塞 key
     dict *ready_keys;           /* Blocked keys that received a PUSH */
+    // 正在监视某个/某些 key 的所有客户端
     dict *watched_keys;         /* WATCHED keys for MULTI/EXEC CAS */
+    // 数据库的号码
     int id;                     /* Database ID */
     long long avg_ttl;          /* Average TTL, just for stats */
     unsigned long expires_cursor; /* Cursor of the active expire cycle. */
@@ -687,14 +707,25 @@ typedef struct redisDb {
 typedef struct dbBackup dbBackup;
 
 /* Client MULTI/EXEC state */
+/*
+ * 事务命令结构
+ */
 typedef struct multiCmd {
+    // 执行命令的所有 key 对象
     robj **argv;
+    // 参数的数量
     int argc;
+    // 被执行的命令
     struct redisCommand *cmd;
 } multiCmd;
 
+/*
+ * 事务状态结构
+ */
 typedef struct multiState {
+    // 数组，保存着所有在事务队列中的命令
     multiCmd *commands;     /* Array of MULTI commands */
+    // 队列中命令的数量
     int count;              /* Total number of MULTI commands */
     int cmd_flags;          /* The accumulated command flags OR-ed together.
                                So if at least a command has a given flag, it
@@ -708,14 +739,23 @@ typedef struct multiState {
 
 /* This structure holds the blocking operation state for a client.
  * The fields used depend on client->btype. */
+/*
+ * 记录客户端的阻塞状态
+ */
 typedef struct blockingState {
     /* Generic fields. */
+    // 超时时间
+    // 如果 UNIX 的当前时间大于等于这个值的话，
+    // 那么取消对客户端的阻塞
     mstime_t timeout;       /* Blocking operation timeout. If UNIX current time
                              * is > timeout then the operation timed out. */
 
     /* BLOCKED_LIST, BLOCKED_ZSET and BLOCKED_STREAM */
+    // 阻塞客户端的任意多个 key
     dict *keys;             /* The keys we are waiting to terminate a blocking
                              * operation such as BLPOP or XREAD. Or NULL. */
+    // 在阻塞被取消时接受元素的 key
+    // 只用于 BRPOPLPUSH 命令
     robj *target;           /* The key that should receive the element,
                              * for BRPOPLPUSH. */
 
@@ -747,6 +787,9 @@ typedef struct blockingState {
  * also called ready_keys in every structure representing a Redis database,
  * where we make sure to remember if a given key was already added in the
  * server.ready_keys list. */
+/*
+ * 记录了已就绪 key 和它对应的 db
+ */
 typedef struct readyList {
     redisDb *db;
     robj *key;
@@ -801,12 +844,20 @@ typedef struct {
                                       need more reserved IDs use UINT64_MAX-1,
                                       -2, ... and so forth. */
 
+/*
+ * 客户端结构
+ *
+ * 为每个连接到服务器的客户端保存维持一个该结构的映射，
+ * 从而实现多路复用。
+ */
 typedef struct client {
     uint64_t id;            /* Client incremental unique ID. */
     connection *conn;
     int resp;               /* RESP protocol version. Can be 2 or 3. */
+    // 指向当前目标数据库的指针
     redisDb *db;            /* Pointer to currently SELECTed DB. */
     robj *name;             /* As set by CLIENT SETNAME. */
+    // 查询缓存
     sds querybuf;           /* Buffer we use to accumulate client queries. */
     size_t qb_pos;          /* The position we have read in querybuf. */
     sds pending_querybuf;   /* If this client is flagged as master, this buffer
@@ -814,17 +865,23 @@ typedef struct client {
                                replication stream that we are receiving from
                                the master. */
     size_t querybuf_peak;   /* Recent (100ms or more) peak of querybuf size. */
+    // 参数的个数
     int argc;               /* Num of arguments of current command. */
+    // 字符串表示的命令，以及命令的参数
     robj **argv;            /* Arguments of current command. */
     size_t argv_len_sum;    /* Sum of lengths of objects in argv list. */
+    // 命令，以及上个命令
     struct redisCommand *cmd, *lastcmd;  /* Last command executed. */
     user *user;             /* User associated with this connection. If the
                                user is set to NULL the connection can do
                                anything (admin). */
+    // 回复类型
     int reqtype;            /* Request protocol type: PROTO_REQ_* */
     int multibulklen;       /* Number of multi bulk arguments left to read. */
     long bulklen;           /* Length of bulk argument in multi bulk request. */
+    // 保存回复的链表
     list *reply;            /* List of reply objects to send to the client. */
+    // 链表中保存的所有回复的总字节大小
     unsigned long long reply_bytes; /* Tot bytes of objects in reply list. */
     size_t sentlen;         /* Amount of bytes already sent in the current
                                buffer or object being sent. */
@@ -833,10 +890,14 @@ typedef struct client {
     time_t obuf_soft_limit_reached_time;
     uint64_t flags;         /* Client flags: CLIENT_* macros. */
     int authenticated;      /* Needed when the default user requires auth. */
+    // 客户端当前的同步状态
     int replstate;          /* Replication state if this is a slave. */
     int repl_put_online_on_ack; /* Install slave write handler on first ACK. */
+    // 同步数据库的文件描述符
     int repldbfd;           /* Replication DB file descriptor. */
+    // 同步数据库文件的偏移量
     off_t repldboff;        /* Replication DB file offset. */
+    // 同步数据库文件的大小
     off_t repldbsize;       /* Replication DB file size. */
     sds replpreamble;       /* Replication DB preamble. */
     long long read_reploff; /* Read replication offset if this is a master. */
@@ -851,11 +912,15 @@ typedef struct client {
     int slave_listening_port; /* As configured with: REPLCONF listening-port */
     char slave_ip[NET_IP_STR_LEN]; /* Optionally given by REPLCONF ip-address */
     int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. */
+    // 事务实现
     multiState mstate;      /* MULTI/EXEC state */
     int btype;              /* Type of blocking op if CLIENT_BLOCKED. */
+    // 阻塞状态
     blockingState bpop;     /* blocking state */
     long long woff;         /* Last write global replication offset. */
+    // 被监视的 KEY
     list *watched_keys;     /* Keys WATCHED for MULTI/EXEC CAS */
+    // 订阅与发布
     dict *pubsub_channels;  /* channels a client is interested in (SUBSCRIBE) */
     list *pubsub_patterns;  /* patterns a client is interested in (SUBSCRIBE) */
     sds peerid;             /* Cached peer ID. */
@@ -885,7 +950,9 @@ typedef struct client {
     uint64_t client_cron_last_memory_usage;
     int      client_cron_last_memory_type;
     /* Response buffer */
+    // 回复缓存的当前缓存
     int bufpos;
+    // 回复缓存，可以保存多个回复
     char buf[PROTO_REPLY_CHUNK_BYTES];
 } client;
 
@@ -900,6 +967,9 @@ struct moduleLoadQueueEntry {
     robj **argv;
 };
 
+/*
+ * 共享对象
+ */
 struct sharedObjectsStruct {
     robj *crlf, *ok, *err, *emptybulk, *czero, *cone, *pong, *space,
     *colon, *queued, *null[4], *nullarray[4], *emptymap[4], *emptyset[4],
@@ -918,24 +988,44 @@ struct sharedObjectsStruct {
 };
 
 /* ZSETs use a specialized version of Skiplists */
+/*
+ * 跳跃表节点
+ */
 typedef struct zskiplistNode {
+    // member 对象
     sds ele;
+    // 分值
     double score;
+    // 后退指针
     struct zskiplistNode *backward;
+    // 层
     struct zskiplistLevel {
+        // 前进指针
         struct zskiplistNode *forward;
+        // 这个层跨越的节点数量
         unsigned long span;
     } level[];
 } zskiplistNode;
 
+/*
+ * 跳跃表
+ */
 typedef struct zskiplist {
+    // 头节点，尾节点
     struct zskiplistNode *header, *tail;
+    // 节点数量
     unsigned long length;
+    // 目前表内节点的最大层数
     int level;
 } zskiplist;
 
+/*
+ * 有序集
+ */
 typedef struct zset {
+    // 字典
     dict *dict;
+    // 跳跃表
     zskiplist *zsl;
 } zset;
 
@@ -1084,18 +1174,26 @@ struct redisServer {
     mode_t umask;               /* The umask value of the process on startup */
     int hz;                     /* serverCron() calls frequency in hertz */
     int in_fork_child;          /* indication that this is a fork child */
+    // 数据库数组
     redisDb *db;
+    // 命令表
     dict *commands;             /* Command table */
     dict *orig_commands;        /* Command table before command renaming. */
+    // 事件状态结构
     aeEventLoop *el;
     _Atomic unsigned int lruclock; /* Clock for LRU eviction */
     volatile sig_atomic_t shutdown_asap; /* SHUTDOWN needed ASAP */
     int activerehashing;        /* Incremental rehash in serverCron() */
     int active_defrag_running;  /* Active defragmentation running (holds current scan aggressiveness) */
+    // PID 文件路径
     char *pidfile;              /* PID file path */
+    // 宿主架构字长
     int arch_bits;              /* 32 or 64 depending on sizeof(long) */
+    // CRON 函数调用的次数
     int cronloops;              /* Number of times the cron function run */
+    // 每次调用 exec 时都创建新 ID
     char runid[CONFIG_RUN_ID_SIZE+1];  /* ID always different at every exec. */
+    // 如果服务器为 SENTINEL ，那么为真
     int sentinel_mode;          /* True if this instance is a Sentinel. */
     size_t initial_memory_usage; /* Bytes used after initialization. */
     int always_show_logo;       /* Show logo even for non-stdout logging. */
@@ -1109,13 +1207,19 @@ struct redisServer {
                                    client blocked on a module command needs
                                    to be processed. */
     pid_t module_child_pid;     /* PID of module child */
+
+
     /* Networking */
+    // 监听端口
     int port;                   /* TCP listening port */
     int tls_port;               /* TLS listening port */
     int tcp_backlog;            /* TCP listen() backlog */
+    // 绑定地址
     char *bindaddr[CONFIG_BINDADDR_MAX]; /* Addresses we should bind to */
     int bindaddr_count;         /* Number of addresses in server.bindaddr[] */
+    // 套接字路径
     char *unixsocket;           /* UNIX socket path */
+    // 套接字权限
     mode_t unixsocketperm;      /* UNIX socket permission */
     int ipfd[CONFIG_BINDADDR_MAX]; /* TCP socket file descriptors */
     int ipfd_count;             /* Used slots in ipfd[] */
@@ -1124,12 +1228,19 @@ struct redisServer {
     int sofd;                   /* Unix socket file descriptor */
     int cfd[CONFIG_BINDADDR_MAX];/* Cluster bus listening socket */
     int cfd_count;              /* Used slots in cfd[] */
+
+    /* 客户端 */
+    // 所有当前活动的客户端
     list *clients;              /* List of active clients */
+    // 所有等待关闭的客户端
     list *clients_to_close;     /* Clients to close asynchronously */
     list *clients_pending_write; /* There is to write or install handler. */
     list *clients_pending_read;  /* Client has pending read socket buffers. */
+    // 所有附属节点和 MONITOR
     list *slaves, *monitors;    /* List of slaves and MONITORs */
+    // 当前客户端，只在创建崩溃报告时使用
     client *current_client;     /* Current client executing the command. */
+
     rax *clients_timeout_table; /* Radix tree for blocked clients timeouts. */
     long fixed_time_expire;     /* If > 0, expire keys against server.mstime. */
     rax *clients_index;         /* Active clients dictionary by client ID. */
@@ -1182,9 +1293,13 @@ struct redisServer {
     long long stat_sync_full;       /* Number of full resyncs with slaves. */
     long long stat_sync_partial_ok; /* Number of accepted PSYNC requests. */
     long long stat_sync_partial_err;/* Number of unaccepted PSYNC requests. */
+    // 保存慢查询日志的链表
     list *slowlog;                  /* SLOWLOG list of commands */
+    // 慢查询日志的当前 id 值
     long long slowlog_entry_id;     /* SLOWLOG current entry ID */
+    // 慢查询时间限制
     long long slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) */
+    // 慢查询日志的最大条目数量
     unsigned long slowlog_max_len;     /* SLOWLOG max number of items logged */
     struct malloc_stats cron_malloc_stats; /* sampled in serverCron(). */
     _Atomic long long stat_net_input_bytes; /* Bytes read from network. */
@@ -1388,6 +1503,7 @@ struct redisServer {
     /* Blocked clients */
     unsigned int blocked_clients;   /* # of clients executing a blocking cmd.*/
     unsigned int blocked_clients_by_type[BLOCKED_NUM];
+    // 要在下一次事件 lopp 前取消阻塞的所有客户端
     list *unblocked_clients; /* list of clients to unblock before next loop */
     list *ready_keys;        /* List of readyList structures for BLPOP & co */
     /* Client side caching. */
@@ -1418,7 +1534,9 @@ struct redisServer {
     mstime_t mstime;            /* 'unixtime' in milliseconds. */
     ustime_t ustime;            /* 'unixtime' in microseconds. */
     /* Pubsub */
+    // 频道
     dict *pubsub_channels;  /* Map channels to list of subscribed clients */
+    // 模式
     list *pubsub_patterns;  /* A list of pubsub_patterns */
     dict *pubsub_patterns_dict;  /* A dict of pubsub_patterns */
     int notify_keyspace_events; /* Events to propagate via Pub/Sub. This is an
@@ -1499,8 +1617,13 @@ struct redisServer {
     char *bgsave_cpulist; /* cpu affinity list of bgsave process. */
 };
 
+/*
+ * 订阅模式
+ */
 typedef struct pubsubPattern {
+    // 订阅模式的客户端
     client *client;
+    // 订阅的模式
     robj *pattern;
 } pubsubPattern;
 
@@ -1520,19 +1643,31 @@ typedef struct {
 typedef void redisCommandProc(client *c);
 typedef int redisGetKeysProc(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result);
 struct redisCommand {
+    // 命令的名字
     char *name;
+    // 命令的实现函数
     redisCommandProc *proc;
+    // 命令所需的参数数量
     int arity;
+    // 字符形式表示的 FLAG 值
     char *sflags;   /* Flags as string representation, one char per flag. */
+    // 实际的 FLAG 值，由 sflags 计算得出
     uint64_t flags; /* The actual flags, obtained from the 'sflags' field. */
     /* Use a function to determine keys arguments in a command line.
      * Used for Redis Cluster redirect. */
+    // 可选，在以下三个参数不足以决定命令的 key 参数时使用
     redisGetKeysProc *getkeys_proc;
     /* What keys should be loaded in background when calling this command? */
+    // 第一个 key 的位置
     int firstkey; /* The first argument that's a key (0 = no keys) */
+    // 第二个 key 的位置
     int lastkey;  /* The last argument that's a key */
+    // 两个 key 之间的空隔
     int keystep;  /* The step between first and last key */
-    long long microseconds, calls;
+    // 这个命令被执行所耗费的总毫秒数
+    long long microseconds,
+    // 这个命令被调用的总次数
+    calls;
     int id;     /* Command ID. This is a progressive ID starting from 0 that
                    is assigned at runtime, and is used in order to check
                    ACLs. A connection is able to execute a given command if
@@ -1584,12 +1719,17 @@ typedef struct {
  * hashes involves both fields and values. Because it is possible that
  * not both are required, store pointers in the iterator to avoid
  * unnecessary memory allocation for fields/values. */
+/*
+ * 哈希类型对象的迭代器
+ */
 typedef struct {
     robj *subject;
     int encoding;
 
+    // 用于遍历 ziplist
     unsigned char *fptr, *vptr;
 
+    // 用于遍历字典
     dictIterator *di;
     dictEntry *de;
 } hashTypeIterator;
@@ -1982,8 +2122,12 @@ void addACLLogEntry(client *c, int reason, int keypos, sds username);
 #define ZADD_CH (1<<16)      /* Return num of elements added or updated. */
 
 /* Struct to hold an inclusive/exclusive range spec by score comparison. */
+/*
+ * 用于保存范围值的结构
+ */
 typedef struct {
     double min, max;
+    // min 和 max 是否包括在内？
     int minex, maxex; /* are min or max exclusive? */
 } zrangespec;
 

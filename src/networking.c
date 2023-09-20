@@ -106,6 +106,7 @@ int authRequired(client *c) {
     return auth_required;
 }
 
+// 创建新的客户端实例
 client *createClient(connection *conn) {
     client *c = zmalloc(sizeof(client));
 
@@ -122,32 +123,43 @@ client *createClient(connection *conn) {
         connSetPrivateData(conn, c);
     }
 
+    // 数据库
     selectDb(c,0);
     uint64_t client_id = ++server.next_client_id;
     c->id = client_id;
     c->resp = 2;
     c->conn = conn;
     c->name = NULL;
+
+    // 查询缓存相关的设置
     c->bufpos = 0;
     c->qb_pos = 0;
     c->querybuf = sdsempty();
     c->pending_querybuf = sdsempty();
     c->querybuf_peak = 0;
     c->reqtype = 0;
+
+    // 命令及参数
     c->argc = 0;
     c->argv = NULL;
     c->argv_len_sum = 0;
     c->cmd = c->lastcmd = NULL;
     c->user = DefaultUser;
+
+    // 回复
     c->multibulklen = 0;
     c->bulklen = -1;
     c->sentlen = 0;
+    // 状态
     c->flags = 0;
+    // 用于 LRU 和 IDLE 计算
     c->ctime = c->lastinteraction = server.unixtime;
     /* If the default user does not require authentication, the user is
      * directly authenticated. */
+    // 身份验证
     c->authenticated = (c->user->flags & USER_FLAG_NOPASS) &&
                        !(c->user->flags & USER_FLAG_DISABLED);
+    // REPL 状态
     c->replstate = REPL_STATE_NONE;
     c->repl_put_online_on_ack = 0;
     c->reploff = 0;
@@ -155,15 +167,23 @@ client *createClient(connection *conn) {
     c->repl_ack_off = 0;
     c->repl_ack_time = 0;
     c->repl_last_partial_write = 0;
+    // 附属监听端口
     c->slave_listening_port = 0;
     c->slave_ip[0] = '\0';
     c->slave_capa = SLAVE_CAPA_NONE;
+    // 回复
     c->reply = listCreate();
     c->reply_bytes = 0;
+    // 软缓存超限提醒
     c->obuf_soft_limit_reached_time = 0;
+
+    // 回复处理函数
     listSetFreeMethod(c->reply,freeClientReplyValue);
     listSetDupMethod(c->reply,dupClientReplyValue);
+
     c->btype = BLOCKED_NONE;
+
+    // 阻塞 POP 相关
     c->bpop.timeout = 0;
     c->bpop.keys = dictCreate(&objectKeyHeapPointerValueDictType,NULL);
     c->bpop.target = NULL;
@@ -173,7 +193,11 @@ client *createClient(connection *conn) {
     c->bpop.numreplicas = 0;
     c->bpop.reploffset = 0;
     c->woff = 0;
+
+    // 所有被监视的键
     c->watched_keys = listCreate();
+
+    // pubsub
     c->pubsub_channels = dictCreate(&objectKeyPointerValueDictType,NULL);
     c->pubsub_patterns = listCreate();
     c->peerid = NULL;
@@ -188,6 +212,8 @@ client *createClient(connection *conn) {
     listSetFreeMethod(c->pubsub_patterns,decrRefCountVoid);
     listSetMatchMethod(c->pubsub_patterns,listMatchObjects);
     if (conn) linkClient(c);
+
+    // 初始化事务状态
     initClientMultiState(c);
     return c;
 }
@@ -240,6 +266,11 @@ void clientInstallWriteHandler(client *c) {
  * Typically gets called every time a reply is built, before adding more
  * data to the clients output buffers. If the function returns C_ERR no
  * data should be appended to the output buffers. */
+
+// 这个函数在每次发送新数据到客户端时调用。它的行为如下：
+// 1、如果客户端允许接受新数据（通常情况下都是这样），那么函数返回 REDIS_OK 。并将写处理器装入到事件处理循环中，从而在套接字可用时将新数据写入。
+// 2、当客户端为伪客户端、附属节点，或者设置事件写处理器失败时函数返回 REDIS_ERR 。
+// 3、这个函数通常在新回复被创建，并将新回复添加到客户端之前调用。如果函数返回 REDIS_ERR ，那么没有任何缓存会被追加到缓存。
 int prepareClientToWrite(client *c) {
     /* If it's the Lua client we always return ok without installing any
      * handler since there is no socket at all. */
@@ -281,18 +312,29 @@ int prepareClientToWrite(client *c) {
 /* Attempts to add the reply to the static buffer in the client struct.
  * Returns C_ERR if the buffer is full, or the reply list is not empty,
  * in which case the reply must be added to the reply list. */
+/*
+ * 仅当 c->reply 链表中没有节点时，
+ * 将回复 s 追加到 c->buf 的后部。
+ *
+ * 添加成功返回 REDIS_OK ，添加失败返回 REDIS_ERR 。
+ */
 int _addReplyToBuffer(client *c, const char *s, size_t len) {
+    // 可用的缓存字节数
     size_t available = sizeof(c->buf)-c->bufpos;
 
+    // 客户端将被关闭，无须回复
     if (c->flags & CLIENT_CLOSE_AFTER_REPLY) return C_OK;
 
     /* If there already are entries in the reply list, we cannot
      * add anything more to the static buffer. */
+    // 回复列表中已节点存在，不将内容添加到缓存
     if (listLength(c->reply) > 0) return C_ERR;
 
     /* Check that the buffer has enough space available for this string. */
+    // 如果缓存的空间不足以保存回复，直接返回
     if (len > available) return C_ERR;
 
+    // 追加到缓存中
     memcpy(c->buf+c->bufpos,s,len);
     c->bufpos+=len;
     return C_OK;
@@ -300,7 +342,10 @@ int _addReplyToBuffer(client *c, const char *s, size_t len) {
 
 /* Adds the reply to the reply linked list.
  * Note: some edits to this function need to be relayed to AddReplyFromClient. */
+// 将回复对象所保存的值添加到回复列表 c->reply 末尾
 void _addReplyProtoToList(client *c, const char *s, size_t len) {
+
+    // 服务端已被关闭
     if (c->flags & CLIENT_CLOSE_AFTER_REPLY) return;
 
     listNode *ln = listLast(c->reply);
@@ -333,6 +378,8 @@ void _addReplyProtoToList(client *c, const char *s, size_t len) {
         listAddNodeTail(c->reply, tail);
         c->reply_bytes += tail->size;
     }
+
+    // 如果突破了客户端的最大缓存限制，那么关闭客户端
     asyncCloseClientOnOutputBufferLimitReached(c);
 }
 
@@ -363,6 +410,7 @@ void addReply(client *c, robj *obj) {
 
 /* Add the SDS 's' string to the client output buffer, as a side effect
  * the SDS string is freed. */
+// 将 sds 添加到回复列表末尾
 void addReplySds(client *c, sds s) {
     if (prepareClientToWrite(c) != C_OK) {
         /* The caller expects the sds to be free'd. */
@@ -1205,6 +1253,7 @@ void unlinkClient(client *c) {
     if (c->flags & CLIENT_TRACKING) disableTracking(c);
 }
 
+// 释放客户端
 void freeClient(client *c) {
     listNode *ln;
 
@@ -1487,6 +1536,7 @@ int writeToClient(client *c, int handler_installed) {
 }
 
 /* Write event handler. Just send data to the client. */
+// 将所有回复发送到客户端
 void sendReplyToClient(connection *conn) {
     client *c = connGetPrivateData(conn);
     writeToClient(c,1);
@@ -1540,6 +1590,7 @@ int handleClientsWithPendingWrites(void) {
 }
 
 /* resetClient prepare the client to process the next command */
+// 重置客户端的参数信息，等待下次命令
 void resetClient(client *c) {
     redisCommandProc *prevcmd = c->cmd ? c->cmd->proc : NULL;
 
@@ -2067,10 +2118,13 @@ void readQueryFromClient(connection *conn) {
         if (remaining > 0 && remaining < readlen) readlen = remaining;
     }
 
+    // 分配空间
     qblen = sdslen(c->querybuf);
     if (c->querybuf_peak < qblen) c->querybuf_peak = qblen;
     c->querybuf = sdsMakeRoomFor(c->querybuf, readlen);
+    // 读入到 buf
     nread = connRead(c->conn, c->querybuf+qblen, readlen);
+    // 处理读错误值和 EOF （客户端已关闭）
     if (nread == -1) {
         if (connGetState(conn) == CONN_STATE_CONNECTED) {
             return;
@@ -2236,6 +2290,7 @@ sds catClientInfoString(sds s, client *client) {
         client->user ? client->user->name : "(superuser)");
 }
 
+// 收集并返回所有客户端的状态信息
 sds getAllClientsInfoString(int type) {
     listNode *ln;
     listIter li;
@@ -2290,6 +2345,11 @@ int clientSetNameOrReply(client *c, robj *name) {
     return C_OK;
 }
 
+/*
+ * CLIENT 命令的实现
+ *
+ * 列出客户端的信息，或者对客户端进行操作。
+ */
 void clientCommand(client *c) {
     listNode *ln;
     listIter li;
@@ -2925,6 +2985,7 @@ int checkClientOutputBufferLimits(client *c) {
  * Note: we need to close the client asynchronously because this function is
  * called from contexts where the client can't be freed safely, i.e. from the
  * lower level functions pushing data inside the client output buffers. */
+// 如果客户端的缓存限制被突破了，那么关闭这个客户端
 void asyncCloseClientOnOutputBufferLimitReached(client *c) {
     if (!c->conn) return; /* It is unsafe to free fake clients. */
     serverAssert(c->reply_bytes < SIZE_MAX-(1024*64));

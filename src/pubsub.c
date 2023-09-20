@@ -142,6 +142,11 @@ void addReplyPubsubPatUnsubscribed(client *c, robj *pattern) {
  * Pubsub low level API
  *----------------------------------------------------------------------------*/
 
+/*
+ * 释放指定的模式
+ *
+ * T = O(1)
+ */
 void freePubsubPattern(void *p) {
     pubsubPattern *pat = p;
 
@@ -149,6 +154,11 @@ void freePubsubPattern(void *p) {
     zfree(pat);
 }
 
+/*
+ * 对比两个模式是否相同
+ *
+ * T = O(1)
+ */
 int listMatchPubsubPattern(void *a, void *b) {
     pubsubPattern *pa = a, *pb = b;
 
@@ -164,16 +174,30 @@ int clientSubscriptionsCount(client *c) {
 
 /* Subscribe a client to a channel. Returns 1 if the operation succeeded, or
  * 0 if the client was already subscribed to that channel. */
+/*
+ * 为客户端订阅指定的频道
+ *
+ * 订阅成功返回 1 ，如果频道已经订阅，返回 0 。
+ *
+ * T = O(1)
+ */
 int pubsubSubscribeChannel(client *c, robj *channel) {
     dictEntry *de;
     list *clients = NULL;
     int retval = 0;
 
     /* Add the channel to the client -> channels hash table */
+    // 将 channel 添加到客户端的 pubsub_channels 字典中
+    // 键为 channel ，值为 NULL
+    // O(1)
     if (dictAdd(c->pubsub_channels,channel,NULL) == DICT_OK) {
         retval = 1;
         incrRefCount(channel);
         /* Add the client to the channel -> list of clients hash table */
+        // 将客户端添加到频道的订阅链表里
+        // 其中 server.pubsub_channels 为字典
+        // 字典的键为 channel ，值为链表，链表里保存了订阅该频道的所有客户端
+        // O(1)
         de = dictFind(server.pubsub_channels,channel);
         if (de == NULL) {
             clients = listCreate();
@@ -185,12 +209,20 @@ int pubsubSubscribeChannel(client *c, robj *channel) {
         listAddNodeTail(clients,c);
     }
     /* Notify the client */
+    // 向客户端返回值，告知订阅已成功
     addReplyPubsubSubscribed(c,channel);
     return retval;
 }
 
 /* Unsubscribe a client from a channel. Returns 1 if the operation succeeded, or
  * 0 if the client was not subscribed to the specified channel. */
+/*
+ * 取消客户端对 channel 的订阅
+ *
+ * 退订成功返回 1 ，客户端未订阅 channel 而造成的退订失败返回 0 。
+ *
+ * T = O(N)
+ */
 int pubsubUnsubscribeChannel(client *c, robj *channel, int notify) {
     dictEntry *de;
     list *clients;
@@ -200,15 +232,18 @@ int pubsubUnsubscribeChannel(client *c, robj *channel, int notify) {
     /* Remove the channel from the client -> channels hash table */
     incrRefCount(channel); /* channel may be just a pointer to the same object
                             we have in the hash tables. Protect it... */
+    // 删除客户端中的频道信息, O(1)
     if (dictDelete(c->pubsub_channels,channel) == DICT_OK) {
         retval = 1;
         /* Remove the client from the channel -> clients list hash table */
+        // 删除服务器中客户端订阅频道的信息, O(1)
         de = dictFind(server.pubsub_channels,channel);
         serverAssertWithInfo(c,NULL,de != NULL);
         clients = dictGetVal(de);
         ln = listSearchKey(clients,c);
         serverAssertWithInfo(c,NULL,ln != NULL);
         listDelNode(clients,ln);
+        // 如果链表已经被清空，那么删除它
         if (listLength(clients) == 0) {
             /* Free the list and associated hash entry at all if this was
              * the latest client, so that it will be possible to abuse
@@ -217,22 +252,35 @@ int pubsubUnsubscribeChannel(client *c, robj *channel, int notify) {
         }
     }
     /* Notify the client */
+    // 回复客户端
     if (notify) addReplyPubsubUnsubscribed(c,channel);
     decrRefCount(channel); /* it is finally safe to release it */
     return retval;
 }
 
 /* Subscribe a client to a pattern. Returns 1 if the operation succeeded, or 0 if the client was already subscribed to that pattern. */
+/*
+ * 订阅一个模式
+ *
+ * 订阅成功返回 1 ，如果已经订阅返回 0 。
+ *
+ * T = O(N)
+ */
 int pubsubSubscribePattern(client *c, robj *pattern) {
     dictEntry *de;
     list *clients;
     int retval = 0;
 
+    // 如果 pattern 未保存在 c->pubsub_patterns 链表，那么。。。
+    // O(N)
     if (listSearchKey(c->pubsub_patterns,pattern) == NULL) {
         retval = 1;
         pubsubPattern *pat;
+        // 将模式加入客户端链表, O(1)
         listAddNodeTail(c->pubsub_patterns,pattern);
         incrRefCount(pattern);
+        // 将模式和客户端信息记录到服务器
+        // O(1)
         pat = zmalloc(sizeof(*pat));
         pat->pattern = getDecodedObject(pattern);
         pat->client = c;
@@ -255,6 +303,13 @@ int pubsubSubscribePattern(client *c, robj *pattern) {
 
 /* Unsubscribe a client from a channel. Returns 1 if the operation succeeded, or
  * 0 if the client was not subscribed to the specified channel. */
+/*
+ * 让客户端退订给定的模式
+ *
+ * 退订成功返回 1 ，如果因为客户端并没有订阅模式而造成退订失败，返回 0
+ *
+ * T = O(N)
+ */
 int pubsubUnsubscribePattern(client *c, robj *pattern, int notify) {
     dictEntry *de;
     list *clients;
@@ -263,11 +318,14 @@ int pubsubUnsubscribePattern(client *c, robj *pattern, int notify) {
     int retval = 0;
 
     incrRefCount(pattern); /* Protect the object. May be the same we remove */
+    // 客户端订阅了这个 pattern ？ , O(N)
     if ((ln = listSearchKey(c->pubsub_patterns,pattern)) != NULL) {
         retval = 1;
+        // 从客户端中移除 pattern , O(1)
         listDelNode(c->pubsub_patterns,ln);
         pat.client = c;
         pat.pattern = pattern;
+        // 从服务器中移除这个 pattern ,O(N)
         ln = listSearchKey(server.pubsub_patterns,&pat);
         listDelNode(server.pubsub_patterns,ln);
         /* Remove the client from the pattern -> clients list hash table */
@@ -291,6 +349,11 @@ int pubsubUnsubscribePattern(client *c, robj *pattern, int notify) {
 
 /* Unsubscribe from all the channels. Return the number of channels the
  * client was subscribed to. */
+/*
+ * 让客户端退订所有频道
+ *
+ * T = O(N^2)
+ */
 int pubsubUnsubscribeAllChannels(client *c, int notify) {
     dictIterator *di = dictGetSafeIterator(c->pubsub_channels);
     dictEntry *de;
@@ -309,6 +372,11 @@ int pubsubUnsubscribeAllChannels(client *c, int notify) {
 
 /* Unsubscribe from all the patterns. Return the number of patterns the
  * client was subscribed from. */
+/*
+ * 让客户端退订所有模式
+ *
+ * T = O(N^2)
+ */
 int pubsubUnsubscribeAllPatterns(client *c, int notify) {
     listNode *ln;
     listIter li;
@@ -333,12 +401,14 @@ int pubsubPublishMessage(robj *channel, robj *message) {
     listIter li;
 
     /* Send to clients listening for that channel */
+    // 取出所有订阅给定频道的客户端, O(1)
     de = dictFind(server.pubsub_channels,channel);
     if (de) {
         list *list = dictGetVal(de);
         listNode *ln;
         listIter li;
 
+        // 将信息发送至至所有订阅者, O(N)
         listRewind(list,&li);
         while ((ln = listNext(&li)) != NULL) {
             client *c = ln->value;
@@ -375,6 +445,9 @@ int pubsubPublishMessage(robj *channel, robj *message) {
  * Pubsub commands implementation
  *----------------------------------------------------------------------------*/
 
+/*
+ * 订阅频道
+ */
 void subscribeCommand(client *c) {
     int j;
 

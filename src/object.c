@@ -38,9 +38,15 @@
 
 /* ===================== Creation and parsing of objects ==================== */
 
+/*
+ * 根据给定类型和值，创建新对象
+ */
 robj *createObject(int type, void *ptr) {
+    // 分配空间
     robj *o = zmalloc(sizeof(*o));
+    // 初始化对象域
     o->type = type;
+    // 默认编码
     o->encoding = OBJ_ENCODING_RAW;
     o->ptr = ptr;
     o->refcount = 1;
@@ -74,6 +80,9 @@ robj *makeObjectShared(robj *o) {
 
 /* Create a string object with encoding OBJ_ENCODING_RAW, that is a plain
  * string object where o->ptr points to a proper sds string. */
+/*
+ * 根据给定字符数组，创建一个 String 对象
+ */
 robj *createRawStringObject(const char *ptr, size_t len) {
     return createObject(OBJ_STRING, sdsnewlen(ptr,len));
 }
@@ -142,14 +151,20 @@ robj *createStringObjectFromLongLongWithOptions(long long value, int valueobj) {
     }
 
     if (value >= 0 && value < OBJ_SHARED_INTEGERS && valueobj == 0) {
+        // 如果条件允许，使用共享对象
+        // hhc
         incrRefCount(shared.integers[value]);
         o = shared.integers[value];
     } else {
+        // 否则，创建新 String 对象
         if (value >= LONG_MIN && value <= LONG_MAX) {
+            // long 类型的数字值以 long 类型保存
             o = createObject(OBJ_STRING, NULL);
+            // 设置编码
             o->encoding = OBJ_ENCODING_INT;
             o->ptr = (void*)((long)value);
         } else {
+            // long long 类型的数字值编码成字符串来保存
             o = createObject(OBJ_STRING,sdsfromlonglong(value));
         }
     }
@@ -158,6 +173,9 @@ robj *createStringObjectFromLongLongWithOptions(long long value, int valueobj) {
 
 /* Wrapper for createStringObjectFromLongLongWithOptions() always demanding
  * to create a shared object if possible. */
+/*
+ * 根据给定数字值 value ，创建一个 String 对象
+ */
 robj *createStringObjectFromLongLong(long long value) {
     return createStringObjectFromLongLongWithOptions(value,0);
 }
@@ -176,6 +194,9 @@ robj *createStringObjectFromLongLongForValue(long long value) {
  * and the output of snprintf() is not modified.
  *
  * The 'humanfriendly' option is used for INCRBYFLOAT and HINCRBYFLOAT. */
+/*
+ * 根据给定 long double 值 value ，创建 String 对象
+ */
 robj *createStringObjectFromLongDouble(long double value, int humanfriendly) {
     char buf[MAX_LONG_DOUBLE_CHARS];
     int len = ld2string(buf,sizeof(buf),value,humanfriendly? LD_STR_HUMAN: LD_STR_AUTO);
@@ -190,6 +211,9 @@ robj *createStringObjectFromLongDouble(long double value, int humanfriendly) {
  * will always result in a fresh object that is unshared (refcount == 1).
  *
  * The resulting object always has refcount set to 1. */
+/*
+ * 复制一个 String 对象的副本
+ */
 robj *dupStringObject(const robj *o) {
     robj *d;
 
@@ -211,6 +235,9 @@ robj *dupStringObject(const robj *o) {
     }
 }
 
+/*
+ * 创建一个 list 对象
+ */
 robj *createQuicklistObject(void) {
     quicklist *l = quicklistCreate();
     robj *o = createObject(OBJ_LIST,l);
@@ -218,6 +245,9 @@ robj *createQuicklistObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 ziplist 对象
+ */
 robj *createZiplistObject(void) {
     unsigned char *zl = ziplistNew();
     robj *o = createObject(OBJ_LIST,zl);
@@ -225,6 +255,9 @@ robj *createZiplistObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 set 对象
+ */
 robj *createSetObject(void) {
     dict *d = dictCreate(&setDictType,NULL);
     robj *o = createObject(OBJ_SET,d);
@@ -232,6 +265,9 @@ robj *createSetObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 intset 对象
+ */
 robj *createIntsetObject(void) {
     intset *is = intsetNew();
     robj *o = createObject(OBJ_SET,is);
@@ -239,6 +275,9 @@ robj *createIntsetObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 hash 对象
+ */
 robj *createHashObject(void) {
     unsigned char *zl = ziplistNew();
     robj *o = createObject(OBJ_HASH, zl);
@@ -246,10 +285,14 @@ robj *createHashObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 zset 对象
+ */
 robj *createZsetObject(void) {
     zset *zs = zmalloc(sizeof(*zs));
     robj *o;
 
+    // zset 使用 dict 和 skiplist 两个数据结构
     zs->dict = dictCreate(&zsetDictType,NULL);
     zs->zsl = zslCreate();
     o = createObject(OBJ_ZSET,zs);
@@ -257,6 +300,9 @@ robj *createZsetObject(void) {
     return o;
 }
 
+/*
+ * 创建一个 ziplist 表示的 zset 对象
+ */
 robj *createZsetZiplistObject(void) {
     unsigned char *zl = ziplistNew();
     robj *o = createObject(OBJ_ZSET,zl);
@@ -278,12 +324,18 @@ robj *createModuleObject(moduleType *mt, void *value) {
     return createObject(OBJ_MODULE,mv);
 }
 
+/*
+ * 释放 string 对象
+ */
 void freeStringObject(robj *o) {
     if (o->encoding == OBJ_ENCODING_RAW) {
         sdsfree(o->ptr);
     }
 }
 
+/*
+ * 释放 list 对象
+ */
 void freeListObject(robj *o) {
     if (o->encoding == OBJ_ENCODING_QUICKLIST) {
         quicklistRelease(o->ptr);
@@ -292,11 +344,16 @@ void freeListObject(robj *o) {
     }
 }
 
+/*
+ * 释放 set 对象
+ */
 void freeSetObject(robj *o) {
     switch (o->encoding) {
+    // hash 表示
     case OBJ_ENCODING_HT:
         dictRelease((dict*) o->ptr);
         break;
+    // intset 表示
     case OBJ_ENCODING_INTSET:
         zfree(o->ptr);
         break;
@@ -305,15 +362,20 @@ void freeSetObject(robj *o) {
     }
 }
 
+/*
+ *  释放 zset 对象
+ */
 void freeZsetObject(robj *o) {
     zset *zs;
     switch (o->encoding) {
+    // skiplist 表示
     case OBJ_ENCODING_SKIPLIST:
         zs = o->ptr;
         dictRelease(zs->dict);
         zslFree(zs->zsl);
         zfree(zs);
         break;
+    // ziplist 表示
     case OBJ_ENCODING_ZIPLIST:
         zfree(o->ptr);
         break;
@@ -322,11 +384,16 @@ void freeZsetObject(robj *o) {
     }
 }
 
+/*
+ * 释放 hash 对象
+ */
 void freeHashObject(robj *o) {
     switch (o->encoding) {
+    // hash 表示
     case OBJ_ENCODING_HT:
         dictRelease((dict*) o->ptr);
         break;
+    // ziplist 表示
     case OBJ_ENCODING_ZIPLIST:
         zfree(o->ptr);
         break;
@@ -346,6 +413,9 @@ void freeStreamObject(robj *o) {
     freeStream(o->ptr);
 }
 
+/*
+ * 增加对象的引用计数
+ */
 void incrRefCount(robj *o) {
     if (o->refcount < OBJ_FIRST_SPECIAL_REFCOUNT) {
         o->refcount++;
@@ -358,9 +428,16 @@ void incrRefCount(robj *o) {
     }
 }
 
+/*
+ * 减少对象的引用计数
+ *
+ * 当对象的引用计数降为 0 时，释放这个对象
+ */
 void decrRefCount(robj *o) {
     if (o->refcount == 1) {
         switch(o->type) {
+            // 如果引用数降为 0
+            // 根据对象类型，调用相应的对象释放函数来释放对象的值
         case OBJ_STRING: freeStringObject(o); break;
         case OBJ_LIST: freeListObject(o); break;
         case OBJ_SET: freeSetObject(o); break;
@@ -370,8 +447,10 @@ void decrRefCount(robj *o) {
         case OBJ_STREAM: freeStreamObject(o); break;
         default: serverPanic("Unknown object type"); break;
         }
+        // 释放对象本身
         zfree(o);
     } else {
+        // 否则，只降低引用数
         if (o->refcount <= 0) serverPanic("decrRefCount against refcount <= 0");
         if (o->refcount != OBJ_SHARED_REFCOUNT) o->refcount--;
     }
@@ -396,11 +475,20 @@ void decrRefCountVoid(void *o) {
  *    functionThatWillIncrementRefCount(obj);
  *    decrRefCount(obj);
  */
+/*
+ * 将对象的引用数设置为 0 ，但不释放该对象
+ */
 robj *resetRefCount(robj *obj) {
     obj->refcount = 0;
     return obj;
 }
 
+/*
+ * 检查给定对象 o 的类型是否为给定类型 type
+ *
+ * 类型不相同时返回 1 ，并向客户端报告类型错误。
+ * 类型相同时返回 0 。
+ */
 int checkType(client *c, robj *o, int type) {
     if (o->type != type) {
         addReply(c,shared.wrongtypeerr);
@@ -413,6 +501,9 @@ int isSdsRepresentableAsLongLong(sds s, long long *llval) {
     return string2ll(s,sdslen(s),llval) ? C_OK : C_ERR;
 }
 
+/*
+ * 检查给定的 string 对象能否表示为 long long 类型值
+ */
 int isObjectRepresentableAsLongLong(robj *o, long long *llval) {
     serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);
     if (o->encoding == OBJ_ENCODING_INT) {
@@ -436,6 +527,9 @@ void trimStringObjectIfNeeded(robj *o) {
 }
 
 /* Try to encode a string object in order to save space */
+/*
+ * 尝试将对象 o 编码成整数，并尝试将它加入到共享对象里面
+ */
 robj *tryObjectEncoding(robj *o) {
     long value;
     sds s = o->ptr;
@@ -445,6 +539,7 @@ robj *tryObjectEncoding(robj *o) {
      * in this function. Other types use encoded memory efficient
      * representations but are handled by the commands implementing
      * the type. */
+    // 只尝试对 string 对象进行编码
     serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);
 
     /* We try some specialized encoding only for objects that are
@@ -455,29 +550,39 @@ robj *tryObjectEncoding(robj *o) {
     /* It's not safe to encode shared objects: shared objects can be shared
      * everywhere in the "object space" of Redis and may end in places where
      * they are not handled. We handle them only as values in the keyspace. */
+    // 不对共享对象进行编码
      if (o->refcount > 1) return o;
 
     /* Check if we can represent this string as a long integer.
      * Note that we are sure that a string larger than 20 chars is not
      * representable as a 32 nor 64 bit integer. */
     len = sdslen(s);
+    // 尝试将字符串值转换为 long 整数
+    // 转换失败直接返回 o ，转换成功时继续执行
     if (len <= 20 && string2l(s,len,&value)) {
         /* This object is encodable as a long. Try to use a shared object.
          * Note that we avoid using shared integers when maxmemory is used
          * because every object needs to have a private LRU field for the LRU
          * algorithm to work well. */
+        // 执行到这一行时， value 保存的已经是一个 long 整数了
         if ((server.maxmemory == 0 ||
             !(server.maxmemory_policy & MAXMEMORY_FLAG_NO_SHARED_INTEGERS)) &&
             value >= 0 &&
             value < OBJ_SHARED_INTEGERS)
         {
+            // 看看 value 是否属于可共享值的范围
+            // 如果是的话就用共享对象代替这个对象 o
             decrRefCount(o);
             incrRefCount(shared.integers[value]);
+            // 将共享对象返回
             return shared.integers[value];
         } else {
             if (o->encoding == OBJ_ENCODING_RAW) {
                 sdsfree(o->ptr);
+                // value 不属于共享范围，将它保存到对象 o 中
+                // 更新编码方式
                 o->encoding = OBJ_ENCODING_INT;
+                // 释放旧值
                 o->ptr = (void*) value;
                 return o;
             } else if (o->encoding == OBJ_ENCODING_EMBSTR) {
@@ -517,16 +622,26 @@ robj *tryObjectEncoding(robj *o) {
 
 /* Get a decoded version of an encoded object (returned as a new object).
  * If the object is already raw-encoded just increment the ref count. */
+/*
+ * 返回一个对象的未编码版本
+ *
+ * 如果输入对象是已编码的，那么返回的对象是输入对象的新对象副本
+ * 如果输入对象是未编码的，那么为它的引用计数增一，然后返回它
+ */
 robj *getDecodedObject(robj *o) {
     robj *dec;
 
+    // 返回未编码对象
     if (sdsEncodedObject(o)) {
         incrRefCount(o);
         return o;
     }
+
+    // 返回已编码对象的未编码版本
     if (o->type == OBJ_STRING && o->encoding == OBJ_ENCODING_INT) {
         char buf[32];
 
+        // 将整数值转换回一个字符串对象
         ll2string(buf,32,(long)o->ptr);
         dec = createStringObject(buf,strlen(buf));
         return dec;
@@ -680,13 +795,17 @@ int getLongDoubleFromObjectOrReply(client *c, robj *o, long double *target, cons
     return C_OK;
 }
 
-int getLongLongFromObject(robj *o, long long *target) {
+/*
+ * 从对象 o 中提取 long long 值，并使用指针保存所提取的值
+ */
+int getLongLongFromObject(robj /* 提取对象 */ *o, long long *target/* 保存值的指针 */) {
     long long value;
 
     if (o == NULL) {
         value = 0;
     } else {
         serverAssertWithInfo(NULL,o,o->type == OBJ_STRING);
+        // 根据不同编码，取出值
         if (sdsEncodedObject(o)) {
             if (string2ll(o->ptr,sdslen(o->ptr),&value) == 0) return C_ERR;
         } else if (o->encoding == OBJ_ENCODING_INT) {
@@ -699,7 +818,13 @@ int getLongLongFromObject(robj *o, long long *target) {
     return C_OK;
 }
 
-int getLongLongFromObjectOrReply(client *c, robj *o, long long *target, const char *msg) {
+/*
+ * 将给定对象 o 的 long long 值取出，并通过指针 target 进行保存
+ * 如果提取失败，添加错误信息 msg 到客户端 c
+ */
+int getLongLongFromObjectOrReply(client *c, robj *o, /* 要提取 long long 值的对象 */
+                                 long long *target,  // 保存值的指针
+                                 const char *msg) {  // 错误信息
     long long value;
     if (getLongLongFromObject(o, &value) != C_OK) {
         if (msg != NULL) {
@@ -729,6 +854,9 @@ int getLongFromObjectOrReply(client *c, robj *o, long *target, const char *msg) 
     return C_OK;
 }
 
+/*
+ * 返回编码的字符串形式
+ */
 char *strEncoding(int encoding) {
     switch(encoding) {
     case OBJ_ENCODING_RAW: return "raw";

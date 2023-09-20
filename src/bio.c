@@ -65,6 +65,7 @@ static pthread_t bio_threads[BIO_NUM_OPS];
 static pthread_mutex_t bio_mutex[BIO_NUM_OPS];
 static pthread_cond_t bio_newjob_cond[BIO_NUM_OPS];
 static pthread_cond_t bio_step_cond[BIO_NUM_OPS];
+// 存放工作的队列
 static list *bio_jobs[BIO_NUM_OPS];
 /* The following array is used to hold the number of pending jobs for every
  * OP type. This allows us to export the bioPendingJobsOfType() API that is
@@ -72,14 +73,18 @@ static list *bio_jobs[BIO_NUM_OPS];
  * objects shared with the background thread. The main thread will just wait
  * that there are no longer jobs of this type to be executed before performing
  * the sensible operation. This data is also useful for reporting. */
+// 记录每种类型 job 队列里有多少共组等待执行
 static unsigned long long bio_pending[BIO_NUM_OPS];
 
 /* This structure represents a background Job. It is only used locally to this
  * file as the API does not expose the internals at all. */
+// 表示后台任务的数据结构
 struct bio_job {
+    // 任务创建时的时间
     time_t time; /* Time at which the job was created. */
     /* Job specific arguments pointers. If we need to pass more than three
      * arguments we can just pass a pointer to a structure or alike. */
+    // 任务的参数，如果需要多于三个时，可以传递数组或者结构
     void *arg1, *arg2, *arg3;
 };
 
@@ -196,6 +201,7 @@ void *bioProcessBackgroundJobs(void *arg) {
             continue;
         }
         /* Pop the job from the queue. */
+        // 取出（但不删除）队列中的首个任务
         ln = listFirst(bio_jobs[type]);
         job = ln->value;
         /* It is now possible to unlock the background system as we know have
@@ -203,6 +209,7 @@ void *bioProcessBackgroundJobs(void *arg) {
         pthread_mutex_unlock(&bio_mutex[type]);
 
         /* Process the job accordingly to its type. */
+        // 根据类型 执行任务
         if (type == BIO_CLOSE_FILE) {
             close((long)job->arg1);
         } else if (type == BIO_AOF_FSYNC) {
@@ -226,6 +233,7 @@ void *bioProcessBackgroundJobs(void *arg) {
         /* Lock again before reiterating the loop, if there are no longer
          * jobs to process we'll block again in pthread_cond_wait(). */
         pthread_mutex_lock(&bio_mutex[type]);
+        // 将任务从队列中删除，并减少任务计数器
         listDelNode(bio_jobs[type],ln);
         bio_pending[type]--;
 
@@ -270,7 +278,7 @@ unsigned long long bioWaitStepOfType(int type) {
  * used only when it's critical to stop the threads for some reason.
  * Currently Redis does this only on crash (for instance on SIGSEGV) in order
  * to perform a fast memory check without other threads messing with memory. */
-// 任务关闭
+// 不进行清理，直接杀死进程，只在出现严重错误时使用
 void bioKillThreads(void) {
     int err, j;
 
