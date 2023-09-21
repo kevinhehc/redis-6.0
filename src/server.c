@@ -2006,9 +2006,12 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * */
 
 
-    // 如果保证 定义的 hz 就是真正的运行频率，跟CPU速度无关
-    // 因为 serverCron 是定时触发，1ms一次的，代码出处如下：
+    // 如何保证 定义的 hz 就是真正的运行频率，跟CPU速度无关
+    // 因为 serverCron 创建的时候，1ms触发，代码出处如下「server.c」：
     //  if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR)
+
+    // 后面会根据 timeProc 的返回值是否循环定时，serverCron 就是 timeProc指针指向的函数,返回值就是延迟的时间，代码出处如下「ae.c」:
+    // retval = te->timeProc(eventLoop, id, te->clientData);
 
     run_with_period(100) {
         trackInstantaneousMetric(STATS_METRIC_COMMAND,server.stat_numcommands);

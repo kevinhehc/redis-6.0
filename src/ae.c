@@ -54,7 +54,7 @@
     #ifdef HAVE_EPOLL
     #include "ae_epoll.c"
     #else
-        // 如果定义了 kqueue
+        // 如果定义了 kqueue ， MAC 是使用该 nio
         #ifdef HAVE_KQUEUE
         #include "ae_kqueue.c"
         #else
@@ -312,18 +312,27 @@ int aeDeleteTimeEvent(aeEventLoop *eventLoop, long long id)
  *    Much better but still insertion or deletion of timers is O(N).
  * 2) Use a skiplist to have this operation as O(1) and insertion as O(log(N)).
  */
-// 寻找里目前时间最近的时间事件
+// 寻找里目前执行时间最小的时间事件
 // 因为链表是乱序的，所以查找复杂度为 O（N）
 static aeTimeEvent *aeSearchNearestTimer(aeEventLoop *eventLoop)
 {
     aeTimeEvent *te = eventLoop->timeEventHead;
     aeTimeEvent *nearest = NULL;
 
+    // te 指针先指向 eventLoop 的第一个定时任务，然后不断的往后遍历
+    // nearest 是指找到的最合适的
     while(te) {
-        if (!nearest || te->when_sec < nearest->when_sec ||
-                (te->when_sec == nearest->when_sec &&
-                 te->when_ms < nearest->when_ms))
+        if (
+                // 如果 nearest 是 空，其实就是第一次进 while 循环的时候成立
+                !nearest
+                // 如果 te 的执行时间比 nearest 的小，谁小谁小执行
+                || te->when_sec < nearest->when_sec
+                // 或者秒相等，但是毫秒值小，谁小谁小执行
+                || (te->when_sec == nearest->when_sec && te->when_ms < nearest->when_ms))
+        {
             nearest = te;
+        }
+
         te = te->next;
     }
     return nearest;
@@ -398,7 +407,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
         }
         // 获取当前时间
         aeGetTime(&now_sec, &now_ms);
-        // 如果当前时间等于或等于事件的执行时间，那么执行这个事件
+        // 如果当前时间大于或等于事件的执行时间，那么执行这个事件
         if (now_sec > te->when_sec ||
             (now_sec == te->when_sec && now_ms >= te->when_ms))
         {
@@ -455,7 +464,9 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * The function returns the number of events processed.
  * 函数的返回值为已处理事件的数量
  */
-int aeProcessEvents(aeEventLoop *eventLoop, int flags)
+int aeProcessEvents(aeEventLoop *eventLoop,
+                    int flags // AE_ALL_EVENTS | AE_CALL_BEFORE_SLEEP | AE_CALL_AFTER_SLEEP
+                    )
 {
     int processed = 0, numevents;
 
@@ -470,11 +481,15 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
         ((flags & AE_TIME_EVENTS) && !(flags & AE_DONT_WAIT))) {
         int j;
         aeTimeEvent *shortest = NULL;
-        struct timeval tv, *tvp;
+        struct timeval tv,
+                       *tvp;
 
-        // 获取最近的时间事件
+        // 获取最小的时间事件
         if (flags & AE_TIME_EVENTS && !(flags & AE_DONT_WAIT))
+            // 目前只有 serverCron 一个定时任务
             shortest = aeSearchNearestTimer(eventLoop);
+
+        // 这里只是根据找到的最小要执行的定时任务，看还要过多久再执行，如果大于0，那 aeApiPoll() 方法就可以阻塞那么久
         if (shortest) {
             // 如果时间事件存在的话
             // 那么根据最近可执行时间事件和现在时间的时间差来决定文件事件的阻塞时间
@@ -518,17 +533,21 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
             }
         }
 
+        // 执行到这一步，说明没有时间事件，那么根据 AE_DONT_WAIT 是否设置来决定是否阻塞，以及阻塞的时间长
         if (eventLoop->flags & AE_DONT_WAIT) {
+            // 设置文件事件不阻塞
             tv.tv_sec = tv.tv_usec = 0;
             tvp = &tv;
         }
+
+        // 如果不 AE_DONT_WAIT，文件事件可以阻塞直到有事件到达为止 tvp 默认是 NULL
 
         if (eventLoop->beforesleep != NULL && flags & AE_CALL_BEFORE_SLEEP)
             eventLoop->beforesleep(eventLoop);
 
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
-        // 处理文件事件，阻塞时间由 tvp 决定
+        // 处理事件，其实就是网络事件了，阻塞时间由 tvp 决定
         numevents = aeApiPoll(eventLoop, tvp);
 
         /* After sleep callback. */
@@ -562,12 +581,14 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
              * Fire the readable event if the call sequence is not
              * inverted. */
             if (!invert && fe->mask & mask & AE_READABLE) {
+                // rfired 确保读/写事件只能执行其中一个
                 fe->rfileProc(eventLoop,fd,fe->clientData,mask);
                 fired++;
                 fe = &eventLoop->events[fd]; /* Refresh in case of resize. */
             }
 
             /* Fire the writable event. */
+            // 触发写事件
             if (fe->mask & mask & AE_WRITABLE) {
                 if (!fired || fe->wfileProc != fe->rfileProc) {
                     fe->wfileProc(eventLoop,fd,fe->clientData,mask);
@@ -623,6 +644,7 @@ int aeWait(int fd, int mask, long long milliseconds) {
 // 事件处理器的主循环
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;
+    //如果eventLoop中的stop标志位不为1，就循环处理
     while (!eventLoop->stop) {
         // 如果有需要在事件处理前执行的函数，那么运行它
         aeProcessEvents(eventLoop, AE_ALL_EVENTS|

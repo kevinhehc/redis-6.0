@@ -78,7 +78,10 @@ typedef void aeBeforeSleepProc(struct aeEventLoop *eventLoop);
 /* File event structure */
 // 文件事件结构
 typedef struct aeFileEvent {
-    // 事件类型掩码，值可以是 AE_READABLE 或 AE_WRITABLE ，或者两者的或
+    // 文件事件类型 AE_READABLE|AE_WRITABLE|AE_BARRIER
+    // AE_READABLE 可读
+    // AE_WRITABLE 可写
+    // AE_BARRIER 通常情况下我们都是先执行读事件再执行写事件，如果设置了这个状态，程序永远不会在可读事件后执行可写事件
     int mask; /* one of AE_(READABLE|WRITABLE|BARRIER) */
     // 读事件函数
     aeFileProc *rfileProc;
@@ -144,6 +147,8 @@ typedef struct aeEventLoop {
     aeTimeEvent *timeEventHead;
     // 事件处理器的开关
     int stop;
+    // 事件状态数据，这里使用的为一个万能指针，保存的主要为 底层 IO多路事件状态数据，
+    // 因为之前我们提到过根据不同系统可能选择不同的 多路事件库 select、epoll、evport、kqueue
     void *apidata; /* This is used for polling API specific data */
     // 多路复用库的私有数据
     aeBeforeSleepProc *beforesleep;
