@@ -42,21 +42,30 @@
 
 struct _rio {
     /* Backend functions.
-     * Since this functions do not tolerate short writes or reads the return
-     * value is simplified to: zero on error, non zero on complete success. */
+      * 后端函数
+      * Since this functions do not tolerate short writes or reads the return
+      * 因为这些函数不返回 short count
+      * value is simplified to: zero on error, non zero on complete success.
+      * 如果值为 0 ，那么发生错误，不为 0 则无错误
+      */
     size_t (*read)(struct _rio *, void *buf, size_t len);
     size_t (*write)(struct _rio *, const void *buf, size_t len);
     off_t (*tell)(struct _rio *);
     int (*flush)(struct _rio *);
-    /* The update_cksum method if not NULL is used to compute the checksum of
-     * all the data that was read or written so far. The method should be
-     * designed so that can be called with the current checksum, and the buf
-     * and len fields pointing to the new block of data to add to the checksum
-     * computation. */
+    /* The update_cksum method if not NULL is used to compute the checksum of all the
+     * data that was read or written so far.
+     * 如果 update_cksum 函数不为空，那么用它计算所有已写入或读取的数据的校验值。
+     * The method should be designed so that
+     * can be called with the current checksum, and the buf and len fields pointing
+     * to the new block of data to add to the checksum computation.
+     * 函数设计为可以使用当前的校验和调用，而 buf 和 len 则指向要计算校验和的新块。
+     */
     void (*update_cksum)(struct _rio *, const void *buf, size_t len);
 
     /* The current checksum and flags (see RIO_FLAG_*) */
-    uint64_t cksum, flags;
+    // 当前校验和
+    uint64_t cksum,
+             flags;
 
     /* number of bytes read or written */
     size_t processed_bytes;
@@ -65,13 +74,16 @@ struct _rio {
     size_t max_processing_chunk;
 
     /* Backend-specific vars. */
+    // 后端变量
     union {
         /* In-memory buffer target. */
+        // 处理字节/字符串时使用
         struct {
             sds ptr;
             off_t pos;
         } buffer;
         /* Stdio file pointer target. */
+        // 处理文件时使用
         struct {
             FILE *fp;
             off_t buffered; /* Bytes written since last fsync. */
@@ -100,6 +112,11 @@ typedef struct _rio rio;
  * actual implementation of read / write / tell, and will update the checksum
  * if needed. */
 
+/*
+ * 写入函数
+ *
+ * 写入成功返回 1 ，否则返回 0 。
+ */
 static inline size_t rioWrite(rio *r, const void *buf, size_t len) {
     if (r->flags & RIO_FLAG_WRITE_ERROR) return 0;
     while (len) {
@@ -116,6 +133,11 @@ static inline size_t rioWrite(rio *r, const void *buf, size_t len) {
     return 1;
 }
 
+/*
+ * 读取函数
+ *
+ * 读取成功返回 1 ，否则返回 0 。
+ */
 static inline size_t rioRead(rio *r, void *buf, size_t len) {
     if (r->flags & RIO_FLAG_READ_ERROR) return 0;
     while (len) {
@@ -132,6 +154,9 @@ static inline size_t rioRead(rio *r, void *buf, size_t len) {
     return 1;
 }
 
+/*
+ * 返回当前的偏移量
+ */
 static inline off_t rioTell(rio *r) {
     return r->tell(r);
 }

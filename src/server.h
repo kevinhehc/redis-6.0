@@ -90,10 +90,13 @@ typedef long long ustime_t; /* microsecond time type. */
 #define max(a, b) ((a) > (b) ? (a) : (b))
 
 /* Error codes */
+// 执行状态代码
 #define C_OK                    0
 #define C_ERR                   -1
 
 /* Static server configuration */
+/* 服务器默认静态配置 */
+// 每秒钟调用时间中断器的次数
 #define CONFIG_DEFAULT_HZ        10             /* Time interrupt calls/sec. */
 #define CONFIG_MIN_HZ            1
 #define CONFIG_MAX_HZ            500

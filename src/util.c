@@ -374,6 +374,15 @@ int ll2string(char *dst, size_t dstlen, long long svalue) {
  * Because of its strictness, it is safe to use this function to check if
  * you can convert a string into a long long, and obtain back the string
  * from the number without any loss in the string representation. */
+/*
+ * 将一个字符串转换为 long long 整数值
+ *
+ * 复杂度：O(N)
+ *
+ * 返回值：
+ *  转换成功返回 1 ，失败返回 0 。
+ *  转换成功时，将 value 的值设为转换所得的 long long 值。
+ */
 int string2ll(const char *s, size_t slen, long long *value) {
     const char *p = s;
     size_t plen = 0;
@@ -381,10 +390,12 @@ int string2ll(const char *s, size_t slen, long long *value) {
     unsigned long long v;
 
     /* A zero length string is not a valid number. */
+    // 空字符串
     if (plen == slen)
         return 0;
 
     /* Special case: first and only digit is 0. */
+    // 值为 0
     if (slen == 1 && p[0] == '0') {
         if (value != NULL) *value = 0;
         return 1;
@@ -392,16 +403,19 @@ int string2ll(const char *s, size_t slen, long long *value) {
 
     /* Handle negative numbers: just set a flag and continue like if it
      * was a positive number. Later convert into negative. */
+    // 值为负数
     if (p[0] == '-') {
         negative = 1;
         p++; plen++;
 
         /* Abort on only a negative sign. */
+        // 只有负号，停止
         if (plen == slen)
             return 0;
     }
 
     /* First digit should be 1-9, otherwise the string should just be 0. */
+    // 第一个数字必须不为 0 ，否则值为 0
     if (p[0] >= '1' && p[0] <= '9') {
         v = p[0]-'0';
         p++; plen++;
@@ -410,11 +424,16 @@ int string2ll(const char *s, size_t slen, long long *value) {
     }
 
     /* Parse all the other digits, checking for overflow at every step. */
+    // 遍历整个字符串
     while (plen < slen && p[0] >= '0' && p[0] <= '9') {
+        // 如果 v * 10 > ULLONG_MAX
+        // 那么值溢出
         if (v > (ULLONG_MAX / 10)) /* Overflow. */
             return 0;
         v *= 10;
 
+        // 如果 v + (p[0]-'0') > ULLONG_MAX
+        // 那么值溢出
         if (v > (ULLONG_MAX - (p[0]-'0'))) /* Overflow. */
             return 0;
         v += p[0]-'0';
@@ -423,11 +442,13 @@ int string2ll(const char *s, size_t slen, long long *value) {
     }
 
     /* Return if not all bytes were used. */
+    // 并非整个字符串都能转换为整数，返回 0
     if (plen < slen)
         return 0;
 
     /* Convert to negative if needed, and do the final overflow check when
      * converting from unsigned long long to long long. */
+    // 处理返回值的负数情况
     if (negative) {
         if (v > ((unsigned long long)(-(LLONG_MIN+1))+1)) /* Overflow. */
             return 0;

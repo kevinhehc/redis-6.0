@@ -250,6 +250,7 @@ void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
         listRewind(slaves,&li);
         while((ln = listNext(&li))) {
             client *slave = ln->value;
+            // 不要向还在等待 BGSAVE 的附属节点发送命令
             if (slave->replstate == SLAVE_STATE_WAIT_BGSAVE_START) continue;
             addReply(slave,selectcmd);
         }
@@ -711,10 +712,12 @@ int startBgsaveForReplication(int mincapa) {
 /* SYNC and PSYNC command implementation. */
 void syncCommand(client *c) {
     /* ignore SYNC if already slave or in monitor mode */
+    // 客户端已经是附属节点时，直接返回
     if (c->flags & CLIENT_SLAVE) return;
 
     /* Refuse SYNC requests if we are a slave but the link with our master
      * is not ok... */
+    // 客户端是附属节点，但是主节点不可用时，直接返回
     if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED) {
         addReplySds(c,sdsnew("-NOMASTERLINK Can't SYNC while not connected with my master\r\n"));
         return;
@@ -787,16 +790,19 @@ void syncCommand(client *c) {
     }
 
     /* CASE 1: BGSAVE is in progress, with disk target. */
+    // 检查是否已经有 BGSAVE 在执行，否则就创建一个新的 BGSAVE 任务
     if (server.rdb_child_pid != -1 &&
         server.rdb_child_type == RDB_CHILD_TYPE_DISK)
     {
         /* Ok a background save is in progress. Let's check if it is a good
          * one for replication, i.e. if there is another slave that is
          * registering differences since the server forked to save. */
+        // 已有 BGSAVE 在执行，检查它能否用于当前客户端的 SYNC 操作
         client *slave;
         listNode *ln;
         listIter li;
 
+        // 检查是否有其他客户端在等待 SYNC 进行
         listRewind(server.slaves,&li);
         while((ln = listNext(&li))) {
             slave = ln->value;
@@ -807,6 +813,8 @@ void syncCommand(client *c) {
         if (ln && ((c->slave_capa & slave->slave_capa) == slave->slave_capa)) {
             /* Perfect, the server is already registering differences for
              * another slave. Set the right state, and copy the buffer. */
+            // 找到一个同样在等到 SYNC 的客户端
+            // 设置当前客户端的状态，并复制 buffer 。
             copyClientOutputBuffer(c,slave);
             replicationSetupSlaveForFullResync(c,slave->psync_initial_offset);
             serverLog(LL_NOTICE,"Waiting for end of BGSAVE for SYNC");
@@ -827,6 +835,7 @@ void syncCommand(client *c) {
 
     /* CASE 3: There is no BGSAVE is progress. */
     } else {
+        // 没有 BGSAVE 在进行，自己启动一个。
         if (server.repl_diskless_sync && (c->slave_capa & SLAVE_CAPA_EOF)) {
             /* Diskless replication RDB child is created inside
              * replicationCron() since we want to delay its start a
@@ -1014,6 +1023,12 @@ void removeRDBUsedToSyncReplicas(void) {
     }
 }
 
+/*
+ * 将主节点的 .rdb 文件内容发送到附属节点
+ *
+ * 每次最大发送的字节数量有 REDIS_IOBUF_LEN 决定，
+ * 视乎文件的大小和服务器的状态，整个发送过程可能会执行多次
+ */
 void sendBulkToSlave(connection *conn) {
     client *slave = connGetPrivateData(conn);
     char buf[PROTO_IOBUF_LEN];
@@ -1043,26 +1058,35 @@ void sendBulkToSlave(connection *conn) {
     }
 
     /* If the preamble was already transferred, send the RDB bulk data. */
+    // 设置主节点 .rdb 文件的偏移量
     lseek(slave->repldbfd,slave->repldboff,SEEK_SET);
+    // 读取主节点 .rdb 文件的数据到 buf
     buflen = read(slave->repldbfd,buf,PROTO_IOBUF_LEN);
     if (buflen <= 0) {
+        // 主节点 .rdb 文件读取错误，返回
         serverLog(LL_WARNING,"Read error sending DB to replica: %s",
             (buflen == 0) ? "premature EOF" : strerror(errno));
         freeClient(slave);
         return;
     }
+    // 将 buf 发送给附属节点
     if ((nwritten = connWrite(conn,buf,buflen)) == -1) {
         if (connGetState(conn) != CONN_STATE_CONNECTED) {
+            // 附属节点写入出错，返回
             serverLog(LL_WARNING,"Write error sending DB to replica: %s",
                 connGetLastError(conn));
             freeClient(slave);
         }
         return;
     }
+    // 更新偏移量
     slave->repldboff += nwritten;
     server.stat_net_output_bytes += nwritten;
+    // .rdb 文件全部发送完毕
     if (slave->repldboff == slave->repldbsize) {
+        // 关闭 .rdb 文件
         close(slave->repldbfd);
+        // 重置
         slave->repldbfd = -1;
         connSetWriteHandler(slave->conn,NULL);
         putSlaveOnline(slave);
@@ -1217,8 +1241,15 @@ void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData,
  *
  * The argument bgsaveerr is C_OK if the background saving succeeded
  * otherwise C_ERR is passed to the function.
+ *
+ * 如果 BGSAVE 执行成功，那么 bgsaveerr 参数的值为 REDIS_OK ，
+ * 否则为 REDIS_ERR 。
+ *
  * The 'type' argument is the type of the child that terminated
- * (if it had a disk or socket target). */
+ * (if it had a disk or socket target).
+ *
+ *
+ * */
 void updateSlavesWaitingBgsave(int bgsaveerr, int type) {
     listNode *ln;
     int startbgsave = 0;
@@ -1228,17 +1259,21 @@ void updateSlavesWaitingBgsave(int bgsaveerr, int type) {
     /* Note: there's a chance we got here from within the REPLCONF ACK command
      * so we must avoid using freeClient, otherwise we'll crash on our way up. */
 
+    // 遍历所有附属节点
     listRewind(server.slaves,&li);
     while((ln = listNext(&li))) {
         client *slave = ln->value;
 
         if (slave->replstate == SLAVE_STATE_WAIT_BGSAVE_START) {
+            // 告诉那些这次不能同步的客户端，可以等待下次 BGSAVE 了。
             startbgsave = 1;
             mincapa = (mincapa == -1) ? slave->slave_capa :
                                         (mincapa & slave->slave_capa);
         } else if (slave->replstate == SLAVE_STATE_WAIT_BGSAVE_END) {
+            // 这些是本次可以同步的客户端
             struct redis_stat buf;
 
+            // 如果 BGSAVE 失败，释放 slave 节点
             if (bgsaveerr != C_OK) {
                 freeClientAsync(slave);
                 serverLog(LL_WARNING,"SYNC failed. BGSAVE child returned an error");
@@ -1289,8 +1324,11 @@ void updateSlavesWaitingBgsave(int bgsaveerr, int type) {
                     serverLog(LL_WARNING,"SYNC failed. Can't open/stat DB after BGSAVE: %s", strerror(errno));
                     continue;
                 }
+                // 偏移量
                 slave->repldboff = 0;
+                // 数据库大小（.rdb 文件的大小）
                 slave->repldbsize = buf.st_size;
+                // 状态
                 slave->replstate = SLAVE_STATE_SEND_BULK;
                 slave->replpreamble = sdscatprintf(sdsempty(),"$%lld\r\n",
                     (unsigned long long) slave->repldbsize);
