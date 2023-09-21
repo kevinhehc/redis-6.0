@@ -610,12 +610,19 @@ void blockForKeys(client *c, int btype, robj **keys, int numkeys, mstime_t timeo
 
 /* Unblock a client that's waiting in a blocking operation such as BLPOP.
  * You should never call this function directly, but unblockClient() instead. */
+/*
+ * 取消客户端的阻塞状态
+ *
+ * T = O(N)
+ */
 void unblockClientWaitingData(client *c) {
     dictEntry *de;
     dictIterator *di;
     list *l;
 
     serverAssertWithInfo(c,NULL,dictSize(c->bpop.keys) != 0);
+    // 遍历所有 key ，将它们从客户端 db->blocking_keys 的链表中移除
+    // O(N)
     di = dictGetIterator(c->bpop.keys);
     /* The client may wait for multiple keys, so unblock it for every key. */
     while((de = dictNext(di)) != NULL) {
@@ -623,16 +630,20 @@ void unblockClientWaitingData(client *c) {
         bkinfo *bki = dictGetVal(de);
 
         /* Remove this client from the list of clients waiting for this key. */
+        // 获取阻塞 key 的所有客户端链表
         l = dictFetchValue(c->db->blocking_keys,key);
         serverAssertWithInfo(c,key,l != NULL);
+        // 将本客户端从该链表中移除
         listDelNode(l,bki->listnode);
         /* If the list is empty we need to remove it to avoid wasting memory */
+        // 如果没有其他客户端阻塞在这个 key 上，那么删除这个链表
         if (listLength(l) == 0)
             dictDelete(c->db->blocking_keys,key);
     }
     dictReleaseIterator(di);
 
     /* Cleanup the client structure */
+    // 清空 bpop.keys 字典
     dictEmpty(c->bpop.keys,NULL);
     if (c->bpop.target) {
         decrRefCount(c->bpop.target);

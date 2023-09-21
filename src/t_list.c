@@ -40,6 +40,15 @@
  *
  * There is no need for the caller to increment the refcount of 'value' as
  * the function takes care of it if needed. */
+/*
+ * 多态推入函数
+ *
+ * 根据 where 参数，将 value 推入列表 subject 的表头或表尾
+ *
+ * 调用者不必对 value 进行计数，这个函数会处理它
+ *
+ * T = O(N^2)
+ */
 void listTypePush(robj *subject, robj *value, int where) {
     if (subject->encoding == OBJ_ENCODING_QUICKLIST) {
         int pos = (where == LIST_HEAD) ? QUICKLIST_HEAD : QUICKLIST_TAIL;
@@ -56,6 +65,11 @@ void *listPopSaver(unsigned char *data, unsigned int sz) {
     return createStringObject((char*)data,sz);
 }
 
+/*
+ * 多态 pop 对象
+ *
+ * T = O(1)
+ */
 robj *listTypePop(robj *subject, int where) {
     long long vlong;
     robj *value = NULL;
@@ -73,6 +87,11 @@ robj *listTypePop(robj *subject, int where) {
     return value;
 }
 
+/*
+ * 多态列表长度获取函数
+ *
+ * T = O(N)
+ */
 unsigned long listTypeLength(const robj *subject) {
     if (subject->encoding == OBJ_ENCODING_QUICKLIST) {
         return quicklistCount(subject->ptr);
@@ -82,6 +101,11 @@ unsigned long listTypeLength(const robj *subject) {
 }
 
 /* Initialize an iterator at the specified index. */
+/*
+ * 创建多态列表迭代器
+ *
+ * T = O(1)
+ */
 listTypeIterator *listTypeInitIterator(robj *subject, long index,
                                        unsigned char direction) {
     listTypeIterator *li = zmalloc(sizeof(listTypeIterator));
@@ -103,6 +127,11 @@ listTypeIterator *listTypeInitIterator(robj *subject, long index,
 }
 
 /* Clean up the iterator. */
+/*
+ * 释放迭代器
+ *
+ * T = O(1)
+ */
 void listTypeReleaseIterator(listTypeIterator *li) {
     zfree(li->iter);
     zfree(li);
@@ -111,6 +140,13 @@ void listTypeReleaseIterator(listTypeIterator *li) {
 /* Stores pointer to current the entry in the provided entry structure
  * and advances the position of the iterator. Returns 1 when the current
  * entry is in fact an entry, 0 otherwise. */
+/*
+ * 将当前迭代到的节点保存到 entry ，并将迭代器的指针向前推移一步。
+ *
+ * 获取节点成功返回 1 ，否则返回 0 。
+ *
+ * T = O(1)
+ */
 int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
     /* Protect from converting when iterating */
     serverAssert(li->subject->encoding == li->encoding);
@@ -125,6 +161,11 @@ int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
 }
 
 /* Return entry or NULL at the current position of the iterator. */
+/*
+ * 返回迭代器当前节点的值，如果迭代已经完成，返回 NULL
+ *
+ * T = O(1)
+ */
 robj *listTypeGet(listTypeEntry *entry) {
     robj *value = NULL;
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
@@ -140,6 +181,11 @@ robj *listTypeGet(listTypeEntry *entry) {
     return value;
 }
 
+/*
+ * 多态插入函数
+ *
+ * T = O(N^2)
+ */
 void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
         value = getDecodedObject(value);
@@ -159,6 +205,11 @@ void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
 }
 
 /* Compare the given object with the entry at the current position. */
+/*
+ * 对比 entry 的值和对象 o
+ *
+ * T = O(N)
+ */
 int listTypeEqual(listTypeEntry *entry, robj *o) {
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
         serverAssertWithInfo(NULL,o,sdsEncodedObject(o));
@@ -169,6 +220,11 @@ int listTypeEqual(listTypeEntry *entry, robj *o) {
 }
 
 /* Delete the element pointed to. */
+/*
+ * 多态删除 entry 指向的元素
+ *
+ * T = O(N^2)
+ */
 void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry) {
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
         quicklistDelEntry(iter->iter, &entry->entry);
@@ -178,6 +234,13 @@ void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry) {
 }
 
 /* Create a quicklist from a single ziplist */
+/*
+ * 将列表转换为给定的编码类型
+ *
+ * 目前只支持将 ziplist 转换为双端链表
+ *
+ * T = O(N)
+ */
 void listTypeConvert(robj *subject, int enc) {
     serverAssertWithInfo(NULL,subject,subject->type==OBJ_LIST);
     serverAssertWithInfo(NULL,subject,subject->encoding==OBJ_ENCODING_ZIPLIST);
@@ -195,7 +258,11 @@ void listTypeConvert(robj *subject, int enc) {
 /*-----------------------------------------------------------------------------
  * List Commands
  *----------------------------------------------------------------------------*/
-
+/*
+ * [LR]PUSH 命令的实现
+ *
+ * T = O(N^3)
+ */
 void pushGenericCommand(client *c, int where) {
     int j, pushed = 0;
 
@@ -233,10 +300,20 @@ void pushGenericCommand(client *c, int where) {
     server.dirty += pushed;
 }
 
+/*
+ * LPUSH 命令的实现
+ *
+ * T = O(N^3)
+ */
 void lpushCommand(client *c) {
     pushGenericCommand(c,LIST_HEAD);
 }
 
+/*
+ * RPUSH 命令的实现
+ *
+ * T = O(N^3)
+ */
 void rpushCommand(client *c) {
     pushGenericCommand(c,LIST_TAIL);
 }
@@ -263,14 +340,29 @@ void pushxGenericCommand(client *c, int where) {
     server.dirty += pushed;
 }
 
+/*
+ * LPUSHX 命令的实现
+ *
+ * T = O(N^2)
+ */
 void lpushxCommand(client *c) {
     pushxGenericCommand(c,LIST_HEAD);
 }
 
+/*
+ * RPUSHX 命令的实现
+ *
+ * T = O(N^2)
+ */
 void rpushxCommand(client *c) {
     pushxGenericCommand(c,LIST_TAIL);
 }
 
+/*
+ * LINSERT 命令的实现
+ *
+ * T = O(N^2)
+ */
 void linsertCommand(client *c) {
     int where;
     robj *subject;
@@ -320,12 +412,22 @@ void linsertCommand(client *c) {
     addReplyLongLong(c,listTypeLength(subject));
 }
 
+/*
+ * LLEN 命令的实现
+ *
+ * T = O(N)
+ */
 void llenCommand(client *c) {
     robj *o = lookupKeyReadOrReply(c,c->argv[1],shared.czero);
     if (o == NULL || checkType(c,o,OBJ_LIST)) return;
     addReplyLongLong(c,listTypeLength(o));
 }
 
+/*
+ * LINDEX 命令的实现
+ *
+ * T = O(N)
+ */
 void lindexCommand(client *c) {
     robj *o = lookupKeyReadOrReply(c,c->argv[1],shared.null[c->resp]);
     if (o == NULL || checkType(c,o,OBJ_LIST)) return;
@@ -353,6 +455,11 @@ void lindexCommand(client *c) {
     }
 }
 
+/*
+ * LSET 命令的实现
+ *
+ * T = O(N^2)
+ */
 void lsetCommand(client *c) {
     robj *o = lookupKeyWriteOrReply(c,c->argv[1],shared.nokeyerr);
     if (o == NULL || checkType(c,o,OBJ_LIST)) return;
@@ -384,6 +491,11 @@ void lsetCommand(client *c) {
     }
 }
 
+/*
+ * 从列表中弹出一个元素，如果弹出元素之后列表为空，那么删除它
+ *
+ * T = O(1)
+ */
 void popGenericCommand(client *c, int where) {
     robj *o = lookupKeyWriteOrReply(c,c->argv[1],shared.null[c->resp]);
     if (o == NULL || checkType(c,o,OBJ_LIST)) return;
@@ -407,14 +519,27 @@ void popGenericCommand(client *c, int where) {
     }
 }
 
+/*
+ * LPOP 命令的实现
+ *
+ * T = O(1)
+ */
 void lpopCommand(client *c) {
     popGenericCommand(c,LIST_HEAD);
 }
 
+/*
+ * RPOP 命令的实现
+ *
+ * T = O(1)
+ */
 void rpopCommand(client *c) {
     popGenericCommand(c,LIST_TAIL);
 }
 
+/*
+ * T = O(N)
+ */
 void lrangeCommand(client *c) {
     robj *o;
     long start, end, llen, rangelen;
@@ -461,6 +586,9 @@ void lrangeCommand(client *c) {
     }
 }
 
+/*
+ * T = O(N^2)
+ */
 void ltrimCommand(client *c) {
     robj *o;
     long start, end, llen, ltrim, rtrim;
@@ -629,6 +757,9 @@ void lposCommand(client *c) {
     }
 }
 
+/*
+ * T = O(N^3)
+ */
 void lremCommand(client *c) {
     robj *subject, *obj;
     obj = c->argv[3];
@@ -694,6 +825,12 @@ void lremCommand(client *c) {
  * as well. This command was originally proposed by Ezra Zygmuntowicz.
  */
 
+/*
+ * 将 value 添加到 dstkey 列表里
+ * 如果 dstkey 为空，那么创建一个新列表，然后执行添加动作
+ *
+ * T = O(N^2)
+ */
 void rpoplpushHandlePush(client *c, robj *dstkey, robj *dstobj, robj *value) {
     /* Create the list if the key does not exist */
     if (!dstobj) {
@@ -709,6 +846,9 @@ void rpoplpushHandlePush(client *c, robj *dstkey, robj *dstobj, robj *value) {
     addReplyBulk(c,value);
 }
 
+/*
+ * T = O(N^2)
+ */
 void rpoplpushCommand(client *c) {
     robj *sobj, *value;
     if ((sobj = lookupKeyWriteOrReply(c,c->argv[1],shared.null[c->resp]))
@@ -823,14 +963,20 @@ int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb 
 }
 
 /* Blocking RPOP/LPOP */
+/*
+ * BLPOP/BRPOP 的底层实现
+ */
 void blockingPopGenericCommand(client *c, int where) {
     robj *o;
     mstime_t timeout;
     int j;
 
+    // 获取 timeout 参数
     if (getTimeoutFromObjectOrReply(c,c->argv[c->argc-1],&timeout,UNIT_SECONDS)
         != C_OK) return;
 
+    // 遍历所有 key
+    // 如果找到第一个不为空的列表对象，那么对它进行 POP ，然后返回
     for (j = 1; j < c->argc-1; j++) {
         o = lookupKeyWrite(c->db,c->argv[j]);
         if (o != NULL) {
@@ -838,9 +984,11 @@ void blockingPopGenericCommand(client *c, int where) {
                 addReply(c,shared.wrongtypeerr);
                 return;
             } else {
+                // key 为非空列表？
                 if (listTypeLength(o) != 0) {
                     /* Non empty list, this is like a normal [LR]POP. */
                     char *event = (where == LIST_HEAD) ? "lpop" : "rpop";
+                    // 非空列表，执行普通的 [LR]POP
                     robj *value = listTypePop(o,where);
                     serverAssert(value != NULL);
 
@@ -850,6 +998,7 @@ void blockingPopGenericCommand(client *c, int where) {
                     decrRefCount(value);
                     notifyKeyspaceEvent(NOTIFY_LIST,event,
                                         c->argv[j],c->db->id);
+                    // 删除空列表
                     if (listTypeLength(o) == 0) {
                         dbDelete(c->db,c->argv[j]);
                         notifyKeyspaceEvent(NOTIFY_GENERIC,"del",
@@ -870,12 +1019,15 @@ void blockingPopGenericCommand(client *c, int where) {
 
     /* If we are inside a MULTI/EXEC and the list is empty the only thing
      * we can do is treating it as a timeout (even with timeout 0). */
+    // 如果命令正被事务包含，那么只能返回等待超时
+    // （阻塞不能用在事务里，因为这回造成事务一直等待下去）
     if (c->flags & CLIENT_MULTI) {
         addReplyNullArray(c);
         return;
     }
 
     /* If the keys do not exist we must block */
+    // 所有给定 key 都为空，进行 block
     blockForKeys(c,BLOCKED_LIST,c->argv + 1,c->argc - 2,timeout,NULL,NULL);
 }
 
@@ -890,11 +1042,14 @@ void brpopCommand(client *c) {
 void brpoplpushCommand(client *c) {
     mstime_t timeout;
 
+    // 获取 timeout 参数
     if (getTimeoutFromObjectOrReply(c,c->argv[3],&timeout,UNIT_SECONDS)
         != C_OK) return;
 
+    // 查找 key 对象
     robj *key = lookupKeyWrite(c->db, c->argv[1]);
 
+    // 不存在？
     if (key == NULL) {
         if (c->flags & CLIENT_MULTI) {
             /* Blocking against an empty list in a multi state
@@ -902,6 +1057,7 @@ void brpoplpushCommand(client *c) {
             addReplyNull(c);
         } else {
             /* The list is empty and the client blocks. */
+            // 直接等待元素 push 到 key
             blockForKeys(c,BLOCKED_LIST,c->argv + 1,1,timeout,c->argv[2],NULL);
         }
     } else {
