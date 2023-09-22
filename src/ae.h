@@ -2,6 +2,8 @@
  * for the Jim's event-loop (Jim is a Tcl interpreter) but later translated
  * it in form of a library for easy reuse.
  *
+ * 一个简单的事件驱动编程库。最初，我为 Jim 的事件循环编写了这段代码（Jim 是 Tcl 解释器），但后来将其翻译为库的形式以便于重用。
+ *
  * Copyright (c) 2006-2012, Salvatore Sanfilippo <antirez at gmail dot com>
  * All rights reserved.
  *
@@ -50,6 +52,9 @@
                            loop iteration. Useful when you want to persist
                            things to disk before sending replies, and want
                            to do that in a group fashion. */
+
+                           // 使用 WRITABLE，如果 READABLE 事件已在同一事件循环迭代中触发，则从不触发该事件。
+                           // 当您希望在发送回复之前将内容保存到磁盘并希望以组方式执行此操作时，很有用。
 
 // 时间处理器的执行 flags
 #define AE_FILE_EVENTS (1<<0)
@@ -114,6 +119,7 @@ typedef struct aeTimeEvent {
     struct aeTimeEvent *prev;
     // 指向下个时间事件结构，形成链表
     struct aeTimeEvent *next;
+    // refcount 用于防止在递归时间事件调用中释放计时器事件。
     int refcount; /* refcount to prevent timer events from being
   		   * freed in recursive time event calls. */
 } aeTimeEvent;
