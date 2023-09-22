@@ -1,4 +1,5 @@
 /* Maxmemory directive handling (LRU eviction and other policies).
+ * 最大内存指令处理（LRU 逐出和其他策略）。
  *
  * ----------------------------------------------------------------------------
  *
@@ -442,11 +443,21 @@ int getMaxmemoryState(size_t *total, size_t *logical, size_t *tofree, float *lev
  * The function returns C_OK if we are under the memory limit or if we
  * were over the limit, but the attempt to free memory was successful.
  * Otherwise if we are over the memory limit, but not enough memory
- * was freed to return back under the limit, the function returns C_ERR. */
+ * was freed to return back under the limit, the function returns C_ERR.
+ *
+ * 定期调用此函数，以查看是否有内存根据当前的“maxmemory”设置释放。
+ * 如果我们超过内存限制，该函数将尝试释放一些内存以返回到限制以下。
+ * 如果我们低于内存限制或超过限制，但释放内存的尝试成功，该函数将返回C_OK。
+ * 否则，如果我们超过了内存限制，但释放的内存不足，无法返回到限制以下，则该函数将返回C_ERR。
+ *
+ * */
 int freeMemoryIfNeeded(void) {
     int keys_freed = 0;
     /* By default replicas should ignore maxmemory
-     * and just be masters exact copies. */
+     * and just be masters exact copies.
+     *
+     * 默认情况下，副本应忽略最大内存，而只是主副本的精确副本。
+     * */
     if (server.masterhost && server.repl_slave_ignore_maxmemory) return C_OK;
 
     size_t mem_reported, mem_tofree, mem_freed;
@@ -457,7 +468,10 @@ int freeMemoryIfNeeded(void) {
 
     /* When clients are paused the dataset should be static not just from the
      * POV of clients not being able to write, but also from the POV of
-     * expires and evictions of keys not being performed. */
+     * expires and evictions of keys not being performed.
+     *
+     * 当客户端暂停时，数据集应该是静态的，不仅来自客户端无法写入的 POV，还来自过期和未执行的密钥逐出的 POV。
+     * */
     if (clientsArePaused()) return C_OK;
     if (getMaxmemoryState(&mem_reported,NULL,&mem_tofree,NULL) == C_OK)
         return C_OK;
@@ -487,7 +501,11 @@ int freeMemoryIfNeeded(void) {
 
                 /* We don't want to make local-db choices when expiring keys,
                  * so to start populate the eviction pool sampling keys from
-                 * every DB. */
+                 * every DB.
+                 *
+                 * 我们不希望在过期密钥时做出本地数据库选择，因此要开始从每个数据库填充逐出池采样密钥。
+                 *
+                 * */
                 for (i = 0; i < server.dbnum; i++) {
                     db = server.db+i;
                     dict = (server.maxmemory_policy & MAXMEMORY_FLAG_ALLKEYS) ?
@@ -497,9 +515,10 @@ int freeMemoryIfNeeded(void) {
                         total_keys += keys;
                     }
                 }
-                if (!total_keys) break; /* No keys to evict. */
+                if (!total_keys) break; /* No keys to evict. 没有数据可以淘汰*/
 
                 /* Go backward from best to worst element to evict. */
+                // 从最佳元素倒退到最差元素以驱逐。
                 for (k = EVPOOL_SIZE-1; k >= 0; k--) {
                     if (pool[k].key == NULL) continue;
                     bestdbid = pool[k].dbid;
@@ -513,13 +532,18 @@ int freeMemoryIfNeeded(void) {
                     }
 
                     /* Remove the entry from the pool. */
+                    // 从池中删除条目。
                     if (pool[k].key != pool[k].cached)
                         sdsfree(pool[k].key);
                     pool[k].key = NULL;
                     pool[k].idle = 0;
 
                     /* If the key exists, is our pick. Otherwise it is
-                     * a ghost and we need to try the next element. */
+                     * a ghost and we need to try the next element.
+                     *
+                     *
+                     * 如果密钥存在，是我们的选择。否则它是一个幽灵，我们需要尝试下一个元素。
+                     * */
                     if (de) {
                         bestkey = dictGetKey(de);
                         break;

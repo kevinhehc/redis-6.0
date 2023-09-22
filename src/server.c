@@ -68,6 +68,7 @@ struct sharedObjectsStruct shared;
 /* Global vars that are actually used as constants. The following double
  * values are used for double on-disk serialization, and are initialized
  * at runtime to avoid strange compiler optimizations. */
+// 实际用作常量的全局变量。以下双精度值用于磁盘上的双精度序列化，并在运行时初始化以避免奇怪的编译器优化。
 
 double R_Zero, R_PosInf, R_NegInf, R_Nan;
 
@@ -78,8 +79,10 @@ double R_Zero, R_PosInf, R_NegInf, R_Nan;
 struct redisServer server; /* Server global state */
 
 /* Our command table.
+ * 我们的命令表
  *
  * Every entry is composed of the following fields:
+ * 每个条目都由以下字段组成
  *
  * name:        A string representing the command name.
  *              命令的名称
@@ -122,17 +125,21 @@ struct redisServer server; /* Server global state */
  *              命令被执行的总次数
  *
  * id:          Command bit identifier for ACLs or other goals.
+ *              ACL 或其他目标的命令位标识符
  *
  * The flags, microseconds and calls fields are computed by Redis and should
  * always be set to zero.
+ * 标志、微秒和调用字段由 Redis 计算，应始终设置为零。
  *
  * Command flags are expressed using space separated strings, that are turned
  * into actual flags by the populateCommandTable() function.
+ * 命令标志使用空格分隔的字符串表示，这些字符串由 populateCommandTable（） 函数转换为实际标志。
  *
  * 命令的 FLAG 由 SFLAG 域设置，之后 populateCommandTable() 从 SFLAG 中计算出
  * 真正的 FLAG 。
  *
  * This is the meaning of the flags:
+ * 这是标志的含义：
  *
  * write:       Write command (may modify the key space).
  *              写入命令，可能会修改 key space
@@ -143,6 +150,10 @@ struct redisServer server; /* Server global state */
  *              or transaction related commands (multi, exec, discard, ...)
  *              are not flagged as read-only commands, since they affect the
  *              server or the connection in other ways.
+ *              所有非特殊命令只是从键读取而不更改内容，或返回其他信息，如 TIME 命令。
+ *              特殊命令（如管理命令或与事务相关的命令（multi、exec、discard等）不会标记为只读命令，
+ *              因为它们以其他方式影响服务器或连接。
+ *
  *              读命令，不修改 key space
  *
  * use-memory:  May increase memory usage once called. Don't allow if out
@@ -156,16 +167,23 @@ struct redisServer server; /* Server global state */
  *              发送/订阅相关的命令
  *
  * no-script:   Command not allowed in scripts.
+ *              脚本中不允许使用命令。
  *
  * random:      Random command. Command is not deterministic, that is, the same
  *              command with the same arguments, with the same key space, may
  *              have different results. For instance SPOP and RANDOMKEY are
  *              two random commands.
+ *              随机命令。命令不是确定性的，也就是说，具有相同参数、相同键空间的相同命令可能会有不同的结果。
+ *              例如，SPOP和RANDOMKEY是两个随机命令。
+ *
  *              随机命令，对于同样数据集的同一个命令调用，得出的结果可能是不相同的。
  *
  * to-sort:     Sort command output array if called from script, so that the
  *              output is deterministic. When this flag is used (not always
  *              possible), then the "random" flag is not needed.
+ *              如果从脚本调用，则对命令输出数组进行排序，以便输出具有确定性。
+ *              当使用此标志（并非总是可能）时，则不需要“随机”标志。
+ *
  *              如果命令在脚本中执行，那么对输出进行排序，从而让输出变得确定起来。
  *
  * ok-loading:  Allow the command while loading the database.
@@ -174,22 +192,31 @@ struct redisServer server; /* Server global state */
  * ok-stale:    Allow the command while a slave has stale data but is not
  *              allowed to serve this data. Normally no command is accepted
  *              in this condition but just a few.
+ *              当从属服务器具有过时数据时允许该命令，但不允许提供此数据。
+ *              通常在这种情况下不接受任何命令，只接受少数命令。
  *
  * no-monitor:  Do not automatically propagate the command on MONITOR.
+ *              不要在监视器上自动传播该命令。
  *
  * no-slowlog:  Do not automatically propagate the command to the slowlog.
+ *               不要自动将命令传播到慢日志。
  *
  * cluster-asking: Perform an implicit ASKING for this command, so the
  *              command will be accepted in cluster mode if the slot is marked
  *              as 'importing'.
+ *              对此命令执行隐式 ASK，因此如果插槽标记为“正在导入”，则该命令将在群集模式下被接受
  *
  * fast:        Fast command: O(1) or O(log(N)) command that should never
  *              delay its execution as long as the kernel scheduler is giving
  *              us time. Note that commands that may trigger a DEL as a side
  *              effect (like SET) are not fast commands.
+ *              快速命令：O（1） 或 O（log（N）） 命令，只要内核调度程序给我们时间，它就永远不会延迟它的执行。
+ *              请注意，可能触发 DEL 作为副作用的命令（如 SET）不是快速命令。
  *
  * The following additional flags are only used in order to put commands
  * in a specific ACL category. Commands can have multiple ACL categories.
+ *
+ * 以下附加标志仅用于将命令放入特定 ACL 类别。命令可以有多个 ACL 类别。
  *
  * @keyspace, @read, @write, @set, @sortedset, @list, @hash, @string, @bitmap,
  * @hyperloglog, @stream, @admin, @fast, @slow, @pubsub, @blocking, @dangerous,
@@ -207,6 +234,14 @@ struct redisServer server; /* Server global state */
  *    that interact with keys without having anything to do with
  *    specific data structures, such as: DEL, RENAME, MOVE, SELECT,
  *    TYPE, EXPIRE*, PEXPIRE*, TTL, PTTL, ...
+ *
+ * 1） 只读标志表示 ACL 类别@read。
+ * 2） 写入标志表示 ACL 类别@write。
+ * 3） 快速标志表示 ACL 类别@fast。
+ * 4） 管理员标志表示 @admin 和 @dangerous ACL 类别。
+ * 5） 发布-订阅标志表示 @pubsub ACL 类别。
+ * 6）缺少快速标志意味着@slow ACL类别。
+ * 7）不明显的“键空间”类别包括命令 与键交互，与 特定的数据结构，如：DEL、重命名、移动、选择、 类型， 过期*， 过期*，TTL PTTL，...
  */
 
 struct redisCommand redisCommandTable[] = {
@@ -952,6 +987,8 @@ struct redisCommand redisCommandTable[] = {
      * final bytes in the HyperLogLog representation. However in this case
      * we claim that the representation, even if accessible, is an internal
      * affair, and the command is semantically read only. */
+    // 从技术上讲，PFCOUNT 可能会更改键，因为它会更改 HyperLogLog 表示形式中的最后一个字节。
+    // 但是，在这种情况下，我们声称表示，即使可访问，也是内部事务，并且命令在语义上是只读的。
     {"pfcount",pfcountCommand,-2,
      "read-only @hyperloglog",
      0,NULL,1,-1,1,0,0,0},
@@ -1049,10 +1086,12 @@ struct redisCommand redisCommandTable[] = {
 
 /* We use a private localtime implementation which is fork-safe. The logging
  * function of Redis may be called from other threads. */
+// 我们使用私有的本地时间实现，它是fork安全的。Redis 的日志记录函数可以从其他线程调用
 void nolocks_localtime(struct tm *tmp, time_t t, time_t tz, int dst);
 
 /* Low level logging. To use only for very big messages, otherwise
  * serverLog() is to prefer. */
+// 低级别日志记录。只用于非常大的消息，否则 serverLog（） 是首选。
 void serverLogRaw(int level, const char *msg) {
     const int syslogLevelMap[] = { LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING };
     const char *c = ".-*#";
@@ -1099,6 +1138,7 @@ void serverLogRaw(int level, const char *msg) {
 /* Like serverLogRaw() but with printf-alike support. This is the function that
  * is used across the code. The raw version is only used in order to dump
  * the INFO output on crash. */
+// 与serverLogRaw（）类似，但具有类似printf的支持。这是跨代码使用的函数。原始版本仅用于在崩溃时转储 INFO 输出。
 void serverLog(int level, const char *fmt, ...) {
     va_list ap;
     char msg[LOG_MAX_LEN];
@@ -1118,6 +1158,8 @@ void serverLog(int level, const char *fmt, ...) {
  * We actually use this only for signals that are not fatal from the point
  * of view of Redis. Signals that are going to kill the server anyway and
  * where we need printf-alike features are served by serverLog(). */
+// 记录没有类似 printf 功能的固定消息，以可从信号处理程序安全调用的方式。实际上，我们仅将其用于从Redis的角度来看不是致命的信号。
+// 无论如何都会杀死服务器的信号以及我们需要类似 printf 功能的信号由 serverLog（） 提供。
 void serverLogFromHandler(int level, const char *msg) {
     int fd;
     int log_to_stdout = server.logfile[0] == '\0';
@@ -1162,6 +1204,8 @@ mstime_t mstime(void) {
  * exit(), because the latter may interact with the same file objects used by
  * the parent process. However if we are testing the coverage normal exit() is
  * used in order to obtain the right coverage information. */
+// 在 RDB 转储或 AOF 重写后，我们使用 _exit（） 而不是 exit（） 退出子进程，因为后者可能与父进程使用的相同文件对象交互。
+// 但是，如果我们正在测试覆盖率，则使用正常的 exit（） 来获取正确的覆盖率信息。
 // 如果在测试中，使用 exit 退出 RDB 或 AOF 程序的子进程，
 // 运行情况下，使用 _exit
 void exitFromChild(int retcode) {
@@ -2347,6 +2391,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     flushAppendOnlyFile(0);
 
     /* Handle writes with pending output buffers. */
+    // 对挂起的输出缓存进行写操作
     handleClientsWithPendingWritesUsingThreads();
 
     /* Close clients that need to be closed asynchronous */
@@ -3171,6 +3216,7 @@ void initServer(void) {
      * domain sockets. */
     // 关联网络连接事件
     for (j = 0; j < server.ipfd_count; j++) {
+        // 注册接收链接的事件和对应的处理函数 acceptTcpHandler
         if (aeCreateFileEvent(server.el, server.ipfd[j], AE_READABLE,
             acceptTcpHandler,NULL) == AE_ERR)
             {
@@ -3780,7 +3826,14 @@ void rejectCommandFormat(client *c, const char *fmt, ...) {
  *
  * If C_OK is returned the client is still alive and valid and
  * other operations can be performed by the caller. Otherwise
- * if C_ERR is returned the client was destroyed (i.e. after QUIT). */
+ * if C_ERR is returned the client was destroyed (i.e. after QUIT).
+ *
+ * 如果调用此函数，我们已经读取了整个命令，参数位于客户端 argv/argc 字段中。
+ * processCommand（） 执行命令或准备服务器以从客户端批量读取。
+ * 如果返回C_OK则客户端仍处于活动状态且有效，调用方可以执行其他操作。
+ * 否则，如果返回C_ERR则客户端将被销毁（即在 QUIT 之后）。
+ *
+ * */
 // 执行客户端 C 的命令
 int processCommand(client *c) {
     moduleCallCommandFilters(c);
@@ -3788,8 +3841,10 @@ int processCommand(client *c) {
     /* The QUIT command is handled separately. Normal command procs will
      * go through checking for replication and QUIT will cause trouble
      * when FORCE_REPLICATION is enabled and would be implemented in
-     * a regular command proc. */
-    // 单独处理 QUIT 命令
+     * a regular command proc.
+     *
+     * QUIT 命令是单独处理的。普通命令进程将检查复制，当启用FORCE_REPLICATION并在常规命令进程中实现时，QUIT 将导致问题。
+     * */
     if (!strcasecmp(c->argv[0]->ptr,"quit")) {
         addReply(c,shared.ok);
         c->flags |= CLIENT_CLOSE_AFTER_REPLY;
@@ -3797,7 +3852,9 @@ int processCommand(client *c) {
     }
 
     /* Now lookup the command and check ASAP about trivial error conditions
-     * such as wrong arity, bad command name and so forth. */
+     * such as wrong arity, bad command name and so forth.
+     * 现在查找命令并尽快检查有关琐碎错误条件的信息，例如错误的arity，错误的命令名称等。
+     * */
     // 获取要执行的命令，
     // 并对命令、命令参数和命令参数的数量进行检查
     c->cmd = c->lastcmd = lookupCommand(c->argv[0]->ptr);
@@ -3881,18 +3938,29 @@ int processCommand(client *c) {
     }
 
     /* Handle the maxmemory directive.
+     * 处理最大内存指令。
      *
      * Note that we do not want to reclaim memory if we are here re-entering
      * the event loop since there is a busy Lua script running in timeout
      * condition, to avoid mixing the propagation of scripts with the
-     * propagation of DELs due to eviction. */
-    // 如果内存不足，尝试释放无用内存
-    // 如果命令可能占用大量内存，而且释放内存失败的话，
-    // 那么抛出错误命令
+     * propagation of DELs due to eviction.
+     *
+     * 请注意，如果我们在这里重新进入事件循环，我们不想回收内存，
+     * 因为有一个繁忙的 Lua 脚本在超时条件下运行，
+     * 以避免由于逐出而导致脚本的传播与 DEL 的传播混合。
+     * */
+
+    // 如果命令可能占用大量内存，而且释放内存失败的话，那么抛出错误命令
     if (server.maxmemory && !server.lua_timedout) {
+
+        // 如果内存不足，尝试释放无用内存
         int out_of_memory = freeMemoryIfNeededAndSafe() == C_ERR;
         /* freeMemoryIfNeeded may flush slave output buffers. This may result
-         * into a slave, that may be the active client, to be freed. */
+         * into a slave, that may be the active client, to be freed.
+         *
+         * freeMemoryIfNeed可能会刷新从输出缓冲区。这可能会导致从属服务器（可能是活动客户端）被释放
+         *
+         * */
         if (server.current_client == NULL) return C_ERR;
 
         int reject_cmd_on_oom = is_denyoom_command;
@@ -3900,7 +3968,13 @@ int processCommand(client *c) {
          * amount of memory, so we want to stop that.
          * However, we never want to reject DISCARD, or even EXEC (unless it
          * contains denied commands, in which case is_denyoom_command is already
-         * set. */
+         * set.
+         *
+         * 如果客户端位于 MULTI/EXEC 上下文中，则排队可能会消耗无限量的内存，因此我们希望停止排队。
+         * 但是，我们永远不想拒绝 DISCARD，甚至拒绝 EXEC（除非它包含拒绝的命令，
+         * 在这种情况下，is_denyoom_command已经设置好了。
+         *
+         * */
         if (c->flags & CLIENT_MULTI &&
             c->cmd->proc != execCommand &&
             c->cmd->proc != discardCommand) {
@@ -3914,18 +3988,27 @@ int processCommand(client *c) {
 
         /* Save out_of_memory result at script start, otherwise if we check OOM
          * until first write within script, memory used by lua stack and
-         * arguments might interfere. */
+         * arguments might interfere.
+         *
+         * 在脚本启动时保存out_of_memory结果，否则如果我们检查 OOM 直到第一次在脚本中写入，lua 堆栈和参数使用的内存可能会干扰。
+         * */
         if (c->cmd->proc == evalCommand || c->cmd->proc == evalShaCommand) {
             server.lua_oom = out_of_memory;
         }
     }
 
     /* Make sure to use a reasonable amount of memory for client side
-     * caching metadata. */
+     * caching metadata.
+     *
+     * 确保为客户端缓存元数据使用合理的内存量。
+     * */
     if (server.tracking_clients) trackingLimitUsedSlots();
 
     /* Don't accept write commands if there are problems persisting on disk
-     * and if this is a master instance. */
+     * and if this is a master instance.
+     *
+     * 如果磁盘上仍然存在问题，并且这是主实例，则不要接受写入命令。
+     * */
     int deny_write_type = writeCommandsDeniedByDiskError();
     if (deny_write_type != DISK_ERROR_TYPE_NONE &&
         server.masterhost == NULL &&
@@ -3941,7 +4024,10 @@ int processCommand(client *c) {
     }
 
     /* Don't accept write commands if there are not enough good slaves and
-     * user configured the min-slaves-to-write option. */
+     * user configured the min-slaves-to-write option.
+     *
+     * 如果没有足够的好从站并且用户配置了最小从站写入选项，则不要接受写入命令。
+     * */
     if (server.masterhost == NULL &&
         server.repl_min_slaves_to_write &&
         server.repl_min_slaves_max_lag &&
@@ -3953,7 +4039,9 @@ int processCommand(client *c) {
     }
 
     /* Don't accept write commands if this is a read only slave. But
-     * accept write commands if this is our master. */
+     * accept write commands if this is our master.
+     * 如果这是只读从属服务器，则不要接受写入命令。但是，如果这是我们的主节点，请接受写入命令。
+     * */
     if (server.masterhost && server.repl_slave_ro &&
         !(c->flags & CLIENT_MASTER) &&
         is_write_command)
@@ -3963,7 +4051,9 @@ int processCommand(client *c) {
     }
 
     /* Only allow a subset of commands in the context of Pub/Sub if the
-     * connection is in RESP2 mode. With RESP3 there are no limits. */
+     * connection is in RESP2 mode. With RESP3 there are no limits.
+     * 仅当连接处于 RESP2 模式时，才允许在发布/订阅上下文中执行命令子集。RESP3没有限制。
+     * */
     if ((c->flags & CLIENT_PUBSUB && c->resp == 2) &&
         c->cmd->proc != pingCommand &&
         c->cmd->proc != subscribeCommand &&
@@ -3979,7 +4069,10 @@ int processCommand(client *c) {
 
     /* Only allow commands with flag "t", such as INFO, SLAVEOF and so on,
      * when slave-serve-stale-data is no and we are a slave with a broken
-     * link with master. */
+     * link with master.
+     *
+     * 只允许带有标志“t”的命令，例如INFO，SLAVEOF等，当slave-serv-stale-data为no并且我们是与master链接断开的从属时。
+     * */
     // 在同步中，只有主节点可以执行写操作，附属节点不可以
     if (server.masterhost && server.repl_state != REPL_STATE_CONNECTED &&
         server.repl_serve_stale_data == 0 &&
@@ -3990,7 +4083,9 @@ int processCommand(client *c) {
     }
 
     /* Loading DB? Return an error if the command has not the
-     * CMD_LOADING flag. */
+     * CMD_LOADING flag.
+     * 正在加载数据库？如果命令没有 CMD_LOADING 标志，则返回错误
+     * */
     if (server.loading && is_denyloading_command) {
         rejectCommand(c, shared.loadingerr);
         return C_OK;
@@ -4001,7 +4096,12 @@ int processCommand(client *c) {
      * sending a transaction with pipelining without error checking, may have
      * the MULTI plus a few initial commands refused, then the timeout
      * condition resolves, and the bottom-half of the transaction gets
-     * executed, see Github PR #7022. */
+     * executed, see Github PR #7022.
+     *
+     * Lua 脚本太慢？仅允许有限数量的命令。
+     * 请注意，我们需要允许事务命令，否则在没有错误检查的情况下发送流水线事务的客户端可能会拒绝 MULTI 加上一些初始命令，
+     * 然后超时条件解析，事务的下半部分被执行，请参阅 Github PR #7022。
+     * */
     if (server.lua_timedout &&
           c->cmd->proc != authCommand &&
           c->cmd->proc != helloCommand &&
@@ -4022,6 +4122,7 @@ int processCommand(client *c) {
     }
 
     /* Exec the command */
+    // 执行命令
     if (c->flags & CLIENT_MULTI &&
         c->cmd->proc != execCommand && c->cmd->proc != discardCommand &&
         c->cmd->proc != multiCommand && c->cmd->proc != watchCommand)

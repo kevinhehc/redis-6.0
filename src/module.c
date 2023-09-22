@@ -6606,10 +6606,12 @@ void moduleCallCommandFilters(client *c) {
 
         /* Skip filter if REDISMODULE_CMDFILTER_NOSELF is set and module is
          * currently processing a command.
+         *
+         * 如果设置了REDISMODULE_CMDFILTER_NOSELF并且模块当前正在处理命令，则跳过过滤器。
          */
         if ((f->flags & REDISMODULE_CMDFILTER_NOSELF) && f->module->in_call) continue;
 
-        /* Call filter */
+        /* Call filter 调用过滤器*/
         f->callback(&filter);
     }
 

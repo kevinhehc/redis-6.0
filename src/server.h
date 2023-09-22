@@ -1676,6 +1676,8 @@ struct redisCommand {
                    ACLs. A connection is able to execute a given command if
                    the user associated to the connection has this command
                    bit set in the bitmap of allowed commands. */
+                // 命令 ID。这是一个从 0 开始的渐进式 ID，在运行时分配，用于检查 ACL。
+                // 如果与连接关联的用户在允许命令的位图中设置了此命令位，则连接能够执行给定命令。
 };
 
 struct redisFunctionSym {
