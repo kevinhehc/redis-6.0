@@ -31,7 +31,9 @@
 #ifndef __ZMALLOC_H
 #define __ZMALLOC_H
 
-/* Double expansion needed for stringification of macro values. */
+/* Double expansion needed for stringification of macro values. 
+ *
+ * 宏值字符串化所需的双重扩展。*/
 #define __xstr(s) __str(s)
 #define __str(s) #s
 
@@ -72,7 +74,10 @@
 
 /* We can enable the Redis defrag capabilities only if we are using Jemalloc
  * and the version used is our special version modified for Redis having
- * the ability to return per-allocation fragmentation hints. */
+ * the ability to return per-allocation fragmentation hints. 
+ *
+ * 只有当我们使用Jemalloc时，我们才能启用Redis碎片整理功能，并且使用的
+ * 版本是我们为Redis修改的特殊版本，该版本能够返回每个分配的碎片提示。*/
 #if defined(USE_JEMALLOC) && defined(JEMALLOC_FRAG_HINT)
 #define HAVE_DEFRAG
 #endif
