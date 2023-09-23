@@ -75,11 +75,7 @@ struct sharedObjectsStruct shared;
 
 double R_Zero, R_PosInf, R_NegInf, R_Nan;
 
-/*================================= Globals ================================= 
- *
- * **======================================
- * ==全局====================================
- * ===*/
+/*================================= Globals ================================= */
 
 /* Global vars 
  *
@@ -1012,7 +1008,7 @@ struct redisCommand redisCommandTable[] = {
      * we claim that the representation, even if accessible, is an internal
      * affair, and the command is semantically read only. 
      *
-     * 从技术上讲，PFCOUNT可能会更改密钥，因为它会更改HyperLogLog表示
+     * 从技术上讲，PFCOUNT可能会更改 key，因为它会更改HyperLogLog表示
      * 中的最后字节。然而，在这种情况下，我们声称表示，即使可访问，也是内部事务，并且命
      * 令在语义上是只读的。*/
     {"pfcount",pfcountCommand,-2,
@@ -1113,16 +1109,14 @@ struct redisCommand redisCommandTable[] = {
 /* We use a private localtime implementation which is fork-safe. The logging
  * function of Redis may be called from other threads. 
  *
- * 我们使用一个fork-safe的私有localtime实现。Redis的日志记录
+ * 我们使用一个fork 安全的私有localtime实现。Redis的日志记录
  * 功能可以从其他线程调用。*/
-// 我们使用私有的本地时间实现，它是fork安全的。Redis 的日志记录函数可以从其他线程调用
 void nolocks_localtime(struct tm *tmp, time_t t, time_t tz, int dst);
 
 /* Low level logging. To use only for very big messages, otherwise
  * serverLog() is to prefer. 
  *
  * 低级别日志记录。只用于非常大的消息，否则最好使用serverLog（）。*/
-// 低级别日志记录。只用于非常大的消息，否则 serverLog（） 是首选。
 void serverLogRaw(int level, const char *msg) {
     const int syslogLevelMap[] = { LOG_DEBUG, LOG_INFO, LOG_NOTICE, LOG_WARNING };
     const char *c = ".-*#";
@@ -1180,7 +1174,6 @@ void serverLogRaw(int level, const char *msg) {
  *
  * 类似于serverLogRaw（），但具有类似printf的支持。这是代码中使用
  * 的函数。原始版本仅用于在崩溃时转储INFO输出。*/
-// 与serverLogRaw（）类似，但具有类似printf的支持。这是跨代码使用的函数。原始版本仅用于在崩溃时转储 INFO 输出。
 void serverLog(int level, const char *fmt, ...) {
     va_list ap;
     char msg[LOG_MAX_LEN];
@@ -1202,10 +1195,9 @@ void serverLog(int level, const char *fmt, ...) {
  * where we need printf-alike features are served by serverLog(). 
  *
  * 在没有类似printf功能的情况下，以从信号处理程序安全调用的方式记录固定消息。
- * 实际上，从Redis的角度来看，我们只将其用于不致命的信号。serverLog（
- * ）提供了无论如何都会杀死服务器的信号，以及我们需要类似printf功能的地方。*/
-// 记录没有类似 printf 功能的固定消息，以可从信号处理程序安全调用的方式。实际上，我们仅将其用于从Redis的角度来看不是致命的信号。
-// 无论如何都会杀死服务器的信号以及我们需要类似 printf 功能的信号由 serverLog（） 提供。
+ * 
+ * 实际上，从Redis的角度来看，我们只将其用于不致命的信号。serverLog（）
+ * 提供了无论如何都会杀死服务器的信号，以及我们需要类似printf功能的地方。*/ 
 void serverLogFromHandler(int level, const char *msg) {
     int fd;
     int log_to_stdout = server.logfile[0] == '\0';
@@ -1231,7 +1223,6 @@ err:
 /* Return the UNIX time in microseconds 
  *
  * 以微秒为单位返回UNIX时间*/
-// 返回以微秒为格式的 UNIX 时间
 long long ustime(void) {
     struct timeval tv;
     long long ust;
@@ -1245,7 +1236,6 @@ long long ustime(void) {
 /* Return the UNIX time in milliseconds 
  *
  * 返回以毫秒为单位的UNIX时间*/
-// 返回以毫秒为单位的 UNIX 时间
 mstime_t mstime(void) {
     return ustime()/1000;
 }
@@ -1255,13 +1245,9 @@ mstime_t mstime(void) {
  * the parent process. However if we are testing the coverage normal exit() is
  * used in order to obtain the right coverage information. 
  *
- * 在RDB转储或AOF重写之后，我们使用_exit（）而不是exit（）从子进程退
- * 出，因为后者可能与父进程使用的相同文件对象交互。然而，如果我们正在测试覆盖率，则
- * 使用normal exit（）来获得正确的覆盖率信息。*/
-// 在 RDB 转储或 AOF 重写后，我们使用 _exit（） 而不是 exit（） 退出子进程，因为后者可能与父进程使用的相同文件对象交互。
-// 但是，如果我们正在测试覆盖率，则使用正常的 exit（） 来获取正确的覆盖率信息。
-// 如果在测试中，使用 exit 退出 RDB 或 AOF 程序的子进程，
-// 运行情况下，使用 _exit
+ * 在RDB转储或AOF重写之后，我们使用_exit（）而不是exit（）从子进程退出，
+ * 因为后者可能与父进程使用的相同文件对象交互。然而，如果我们正在测试覆盖率，
+ * 则使用normal exit（）来获得正确的覆盖率信息。*/ 
 void exitFromChild(int retcode) {
 #ifdef COVERAGE_TEST
     exit(retcode);
@@ -1407,24 +1393,12 @@ uint64_t dictEncObjHash(const void *key) {
  *
  * 泛型哈希表类型，其中键为Redis对象，值为伪指针。*/
 dictType objectKeyPointerValueDictType = {
-    dictEncObjHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                      /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                      /* val dup 
-                                *
-                                * 上一次重复*/
-    dictEncObjKeyCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictObjectDestructor,      /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                       /* val destructor 
-                                *
-                                * val析构函数*/
+    dictEncObjHash,            /* hash function  散列函数*/
+    NULL,                      /* key dup  键复制*/
+    NULL,                      /* val dup 值复制*/
+    dictEncObjKeyCompare,      /* key compare  键比较*/
+    dictObjectDestructor,      /* key destructor  键析构函数*/
+    NULL                       /* val destructor 值析构函数*/
 };
 
 /* Like objectKeyPointerValueDictType(), but values can be destroyed, if
@@ -1433,96 +1407,50 @@ dictType objectKeyPointerValueDictType = {
  * 类似于objectKeyPointerValueDictType（），但如果值不
  * 是NULL，则可以通过调用zfree（）来销毁值。*/
 dictType objectKeyHeapPointerValueDictType = {
-    dictEncObjHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                      /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                      /* val dup 
-                                *
-                                * 上一次重复*/
-    dictEncObjKeyCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictObjectDestructor,      /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    dictVanillaFree            /* val destructor 
-                                *
-                                * val析构函数*/
+    dictEncObjHash,            /* hash function  散列函数*/
+    NULL,                     /* key dup  键复制*/
+    NULL,                      /* val dup 值复制*/
+    dictEncObjKeyCompare,      /* key compare  键比较*/
+    dictObjectDestructor,      /* key destructor  键析构函数*/
+    dictVanillaFree            /* val destructor 值析构函数*/
 };
 
 /* Set dictionary type. Keys are SDS strings, values are not used. 
  *
  * 设置字典类型。键是SDS字符串，不使用值。*/
 dictType setDictType = {
-    dictSdsHash,               /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                      /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                      /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,         /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,         /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                       /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,              /* hash function  散列函数*/
+    NULL,                       /* key dup  键复制*/
+    NULL,                      /* val dup 值复制*/
+    dictSdsKeyCompare,        /* key compare  键比较*/
+    dictSdsDestructor,        /* key destructor  键析构函数*/
+    NULL                       /* val destructor 值析构函数*/
 };
 
 /* Sorted sets hash (note: a skiplist is used in addition to the hash table) 
  *
  * 排序集哈希（注意：除了哈希表之外，还使用了skiplist）*/
 dictType zsetDictType = {
-    dictSdsHash,               /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                      /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                      /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,         /* key compare 
-                                *
-                                * 关键字比较*/
+    dictSdsHash,              /* hash function  散列函数*/
+    NULL,                       /* key dup  键复制*/
+    NULL,                      /* val dup 值复制*/
+    dictSdsKeyCompare,        /* key compare  键比较*/
     NULL,                      /* Note: SDS string shared & freed by skiplist 
                                 *
                                 * 注意：由skiplist共享和释放的SDS字符串*/
-    NULL                       /* val destructor 
-                                *
-                                * val析构函数*/
+    NULL                       /* val destructor 值析构函数*/
 };
 
 /* Db->dict, keys are sds strings, vals are Redis objects. 
  *
  * Db->dict，keys是sds字符串，vals是Redis对象。*/
 dictType dbDictType = {
-    dictSdsHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    dictObjectDestructor   /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCompare,         /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    dictObjectDestructor   /* val destructor 值析构函数*/
 };
 
 /* server.lua_scripts sha (as sds string) -> scripts (as robj) cache. 
@@ -1530,96 +1458,48 @@ dictType dbDictType = {
  * server.lua_scripts-sha（作为sds-string）->脚本
  * （作为robj）缓存。*/
 dictType shaScriptObjectDictType = {
-    dictSdsCaseHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCaseCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    dictObjectDestructor        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsCaseHash,           /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCaseCompare,     /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    dictObjectDestructor        /* val destructor 值析构函数*/
 };
 
 /* Db->expires 
  *
  * Db->过期*/
 dictType keyptrDictType = {
-    dictSdsHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    NULL,                       /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCompare,         /* key compare  键比较*/
+    NULL,                      /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Command table. sds string -> command struct pointer. 
  *
  * 命令表。sds-string->命令结构指针。*/
 dictType commandTableDictType = {
-    dictSdsCaseHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCaseCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsCaseHash,           /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCaseCompare,     /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Hash type hash table (note that small hashes are represented with ziplists) 
  *
  * 哈希类型哈希表（注意，小哈希用ziplists表示）*/
 dictType hashDictType = {
-    dictSdsHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    dictSdsDestructor           /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCompare,         /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    dictSdsDestructor           /* val destructor 值析构函数*/
 };
 
 /* Keylist hash table type has unencoded redis objects as keys and
@@ -1629,24 +1509,12 @@ dictType hashDictType = {
  * 键列表哈希表类型将未编码的redis对象作为键，将列表作为值。它用于阻塞操作（B
  * LPOP），并将交换的密钥映射到等待加载此密钥的客户端列表。*/
 dictType keylistDictType = {
-    dictObjHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictObjKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    dictObjectDestructor,       /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    dictListDestructor          /* val destructor 
-                                *
-                                * val析构函数*/
+    dictObjHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictObjKeyCompare,         /* key compare  键比较*/
+    dictObjectDestructor,      /* key destructor  键析构函数*/
+    dictListDestructor          /* val destructor 值析构函数*/
 };
 
 /* Cluster nodes hash table, mapping nodes addresses 1.2.3.4:6379 to
@@ -1655,24 +1523,12 @@ dictType keylistDictType = {
  * 集群节点哈希表，将节点地址1.2.3.4:6379映射到clusterNode结
  * 构。*/
 dictType clusterNodesDictType = {
-    dictSdsHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCompare,         /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Cluster re-addition blacklist. This maps node IDs to the time
@@ -1682,24 +1538,12 @@ dictType clusterNodesDictType = {
  * 集群重新添加黑名单。这会将节点ID映射到我们可以重新添加此节点的时间。目标是避免
  * 在一段时间内重新读取已删除的节点。*/
 dictType clusterNodesBlackListDictType = {
-    dictSdsCaseHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCaseCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsCaseHash,           /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCaseCompare,     /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Modules system dictionary type. Keys are module name,
@@ -1707,48 +1551,24 @@ dictType clusterNodesBlackListDictType = {
  *
  * 模块系统字典类型。键是模块名称，值是指向RedisModule结构的指针。*/
 dictType modulesDictType = {
-    dictSdsCaseHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCaseCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsCaseHash,           /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCaseCompare,     /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Migrate cache dict type. 
  *
  * 迁移缓存dict类型。*/
 dictType migrateCacheDictType = {
-    dictSdsHash,                /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCompare,          /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsHash,               /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCompare,         /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /* Replication cached script dict (server.repl_scriptcache_dict).
@@ -1758,24 +1578,12 @@ dictType migrateCacheDictType = {
  * 复制缓存的脚本dict（server.repl_scriptcache_dict
  * ）。键是sds-SHA1字符串，而在当前实现中根本不使用值。*/
 dictType replScriptCacheDictType = {
-    dictSdsCaseHash,            /* hash function 
-                                *
-                                * 散列函数*/
-    NULL,                       /* key dup 
-                                *
-                                * 密钥重复*/
-    NULL,                       /* val dup 
-                                *
-                                * 上一次重复*/
-    dictSdsKeyCaseCompare,      /* key compare 
-                                *
-                                * 关键字比较*/
-    dictSdsDestructor,          /* key destructor 
-                                *
-                                * 密钥析构函数*/
-    NULL                        /* val destructor 
-                                *
-                                * val析构函数*/
+    dictSdsCaseHash,           /* hash function  散列函数*/
+    NULL,                        /* key dup  键复制*/
+    NULL,                       /* val dup 值复制*/
+    dictSdsKeyCaseCompare,     /* key compare  键比较*/
+    dictSdsDestructor,         /* key destructor  键析构函数*/
+    NULL                        /* val destructor 值析构函数*/
 };
 
 /*
@@ -1828,7 +1636,9 @@ void tryResizeHashTables(int dbid) {
  *
  * 我们的哈希表实现在写入/读取哈希表时递增地执行重新哈希。尽管如此，如果服务器空闲
  * ，哈希表将在很长一段时间内使用两个表。因此，我们尝试在每次调用该函数时使用1毫秒
- * 的CPU时间来执行一些重新散列。如果执行了一些重新散列，则函数返回1，否则返回0
+ * 的CPU时间来执行一些重新散列。
+ *
+ * 如果执行了一些重新散列，则函数返回1，否则返回0
  * 。*/
 /*
  * 在 Redis Cron 中调用，对数据库中第一个遇到的、可以进行 rehash 的哈希表
@@ -1867,6 +1677,7 @@ int incrementallyRehash(int dbid) {
  * 小，以便在写入时很好地进行复制（否则，当调整大小时，会复制大量内存页）。这个函数
  * 的目标是更新dict.c的能力，根据我们有一个活动的fork-child正在运行
  * 的事实来调整或重新格式化表。*/
+
 // 在执行保存时关闭对数据库的 rehash
 // 避免 copy-on-write 问题
 void updateDictResizePolicy(void) {
@@ -1946,8 +1757,10 @@ int clientsCronResizeQueryBuffer(client *c) {
      * 1) Query buffer is > BIG_ARG and too big for latest peak.
      * 2) Query buffer is > BIG_ARG and client is idle. 
      *
-     * 有两个条件可以调整查询缓冲区的大小：1）查询缓冲区大于BIG_ARG，并且对于最
-     * 近的峰值来说太大。2） 查询缓冲区>BIG_ARG，客户端空闲。*/
+     * 有两个条件可以调整查询缓冲区的大小：
+     *
+     * 1）查询缓冲区大于BIG_ARG，并且对于最近的峰值来说太大。
+     * 2） 查询缓冲区>BIG_ARG，客户端空闲。*/
     if (querybuf_size > PROTO_MBULK_BIG_ARG &&
          ((querybuf_size/(c->querybuf_peak+1)) > 2 ||
           idletime > 2))
@@ -1980,9 +1793,10 @@ int clientsCronResizeQueryBuffer(client *c) {
          * 1) Pending Query buffer is > LIMIT_PENDING_QUERYBUF.
          * 2) Used length is smaller than pending_querybuf_size/2 
          *
-         * 有两个条件可以调整挂起查询缓冲区的大小：1）挂起查询的缓冲区大于LIMIT_pe
-         * nding_QUERYBUF。2） 使用的长度小于pending_querybu
-         * f_size/2*/
+         * 有两个条件可以调整挂起查询缓冲区的大小：
+         * 1）挂起查询的缓冲区大于LIMIT_PENDING_QUERYBUF。
+         * 2） 使用的长度小于pending_querybuf_size/2
+         * */
         size_t pending_querybuf_size = sdsAllocSize(c->pending_querybuf);
         if(pending_querybuf_size > LIMIT_PENDING_QUERYBUF &&
            sdslen(c->pending_querybuf) < (pending_querybuf_size/2))
@@ -2006,13 +1820,15 @@ int clientsCronResizeQueryBuffer(client *c) {
  * When we want to know what was recently the peak memory usage, we just scan
  * such few slots searching for the maximum value. 
  *
- * 此功能用于跟踪最近几秒钟内使用最大内存量的客户端。通过这种方式，我们可以在INF
- * O输出（客户端部分）中提供这样的信息，而不必对所有客户端进行O（N）扫描。这就是
- * 它的工作原理。我们有一个CLIENTS_PEAK_MEM_USAGE_SLOTS
+ * 此功能用于跟踪最近几秒钟内使用最大内存量的客户端。通过这种方式，我们可以在INFO
+ * 输出（客户端部分）中提供这样的信息，而不必对所有客户端进行O（N）扫描。
+ *
+ * 这就是它的工作原理。我们有一个CLIENTS_PEAK_MEM_USAGE_SLOTS
  * 插槽阵列，我们在其中跟踪每个插槽中看到的最大客户端输出和输入缓冲区。每个槽都对应
- * 于最近的一秒，因为数组是通过执行UNIXTIME%CLIENTS_PEAK_ME
- * M_USAGE_SLOTS进行索引的。当我们想知道最近的内存使用峰值是多少时，我
- * 们只需扫描这么少的插槽来搜索最大值。*/
+ * 于最近的一秒，因为数组是通过执行UNIXTIME%CLIENTS_PEAK_MEM_USAGE_SLOTS
+ * 进行索引的。当我们想知道最近的内存使用峰值是多少时，我
+ * 们只需扫描这么少的插槽来搜索最大值。
+ * */
 #define CLIENTS_PEAK_MEM_USAGE_SLOTS 8
 size_t ClientsPeakMemInput[CLIENTS_PEAK_MEM_USAGE_SLOTS];
 size_t ClientsPeakMemOutput[CLIENTS_PEAK_MEM_USAGE_SLOTS];
@@ -2036,8 +1852,10 @@ int clientsCronTrackExpansiveClients(client *c) {
      * clients from the POV of memory usage. 
      *
      * 总是将下一个样本归零，这样当我们切换到该秒时，我们将只注册该秒中较大的样本，而不
-     * 考虑该插槽的历史记录。注意：如果由于某种原因没有以正常频率调用serverCro
-     * n（），我们的索引可能会跳到任何随机位置，例如因为调用某个慢命令需要几秒钟才能执
+     * 考虑该插槽的历史记录。
+     *
+     * 注意：如果由于某种原因没有以正常频率调用serverCron（），
+     * 我们的索引可能会跳到任何随机位置，例如因为调用某个慢命令需要几秒钟才能执
      * 行。在这种情况下，我们的数组可能最终包含的数据可能早于CLIENTS_PEAK_
      * MEM_USAGE_SLOTS秒：但是这不是问题，因为在这里我们只想跟踪“最近”
      * 是否有来自内存使用POV的非常广泛的客户端。*/
@@ -2062,9 +1880,10 @@ int clientsCronTrackExpansiveClients(client *c) {
  * a more incremental way (depending on server.hz). 
  *
  * 在getMemoryOverheadData（）中迭代所有客户端的速度太慢，反过
- * 来会使INFO命令太慢。因此，我们递增地执行此计算，并以更递增的方式（取决于se
- * rver.hz）跟踪客户端使用clinetsCron（）使用的总内存（不是即时的
- * ，而是更新到第二个）。*/
+ * 来会使INFO命令太慢。因此，我们递增地执行此计算，并以更递增的方式（取决于server.hz）
+ * 跟踪客户端使用clinetsCron（）使用的总内存（不是即时的而是更新到第二个）。
+ *
+ * */
 int clientsCronTrackClientsMemUsage(client *c) {
     size_t mem = 0;
     int type = getClientType(c);
@@ -2076,7 +1895,8 @@ int clientsCronTrackClientsMemUsage(client *c) {
     /* Now that we have the memory used by the client, remove the old
      * value from the old category, and add it back. 
      *
-     * 现在我们有了客户端使用的内存，从旧类别中删除旧值，然后将其添加回来。*/
+     * 现在我们有了客户端使用的内存，从旧类别中删除旧值，然后将其添加回来。
+     * */
     server.stat_clients_type_memory[c->client_cron_last_memory_type] -=
         c->client_cron_last_memory_usage;
     server.stat_clients_type_memory[type] += mem;
@@ -2121,9 +1941,12 @@ void getExpansiveClientsInfo(size_t *in_usage, size_t *out_usage) {
  *
  * 此函数由serverCron（）调用，用于在客户端上执行对持续执行非常重要的操作
  * 。例如，我们使用此函数是为了在超时后断开客户端的连接，包括在某个超时为非零的阻塞
- * 命令中被阻塞的客户端。该函数会努力每秒处理所有客户端，即使不能严格保证这一点，因
- * 为在出现诸如慢命令之类的延迟事件时，调用serverCron（）的实际频率可能低
- * 于server.hz。对于这个函数及其调用的函数来说，速度非常快是非常重要的：有
+ * 命令中被阻塞的客户端。
+ *
+ * 该函数会努力每秒处理所有客户端，即使不能严格保证这一点，因
+ * 为在出现诸如慢命令之类的延迟事件时，调用serverCron（）的实际频率可能低于server.hz。
+ *
+ * 对于这个函数及其调用的函数来说，速度非常快是非常重要的：有
  * 时Redis有数以万计的连接客户端，而默认的server.hz值是10，所以有时
  * 我们需要每秒处理数千个客户端，从而将这个函数变成延迟源。*/
 #define CLIENTS_CRON_MIN_ITERATIONS 5
@@ -2176,7 +1999,9 @@ void clientsCron(void) {
          * The protocol is that they return non-zero if the client was
          * terminated. 
          *
-         * 以下函数对客户端执行不同的服务检查。协议是，如果客户端被终止，它们将返回非零。*/
+         * 以下函数对客户端执行不同的服务检查。协议是，如果客户端被终止，它们将返回非零。
+         * */
+
         // 检查客户端是否超时，如果是的话，删除它的连接
         // 如果客户端正因 BLPOP/BRPOP/BLPOPRPUSH 阻塞，那么检查阻塞是否超时，
         // 是的话就退出阻塞状态
@@ -2198,7 +2023,7 @@ void databasesCron(void) {
     /* Expire keys by random sampling. Not required for slaves
      * as master will synthesize DELs for us. 
      *
-     * 通过随机采样使密钥过期。奴隶不需要，因为主人会为我们合成DEL。*/
+     * 通过随机采样使键过期。从节点不需要，因为节点会为我们合成DEL。*/
     if (server.active_expire_enabled) {
         // 如果服务器是主节点的话，进行过期键删除
         // 如果服务器是附属节点的话，那么等待主节点发来的 DEL 命令
@@ -2245,9 +2070,7 @@ void databasesCron(void) {
             resize_db++;
         }
 
-        /* Rehash 
-         *
-         * Rehash*/
+        /* Rehash*/
         if (server.activerehashing) {
             for (j = 0; j < dbs_per_call; j++) {
                 int work_done = incrementallyRehash(rehash_db);
@@ -2281,13 +2104,12 @@ void databasesCron(void) {
  * calling it from call(). 
  *
  * 我们取全局状态下unix时间的缓存值，因为在虚拟内存和老化的情况下，每次访问对象
- * 时都要将当前时间存储在对象中，而不需要准确性。访问全局var比调用时间（NULL
- * ）快得多。
+ * 时都要将当前时间存储在对象中，而不需要准确性。访问全局var比调用时间（NULL）快得多。
  *
  * 此函数应该很快，因为它在call（）中的每次命令执行时都会被调用，因此
- * 可以使用“update_daylight_info”参数来决定是否更新夏令时信息
- * 。通常，我们只在从serverCron（）调用此函数时更新此类信息，而在从cal
- * l（）调用时不更新。*/
+ * 可以使用“update_daylight_info”参数来决定是否更新夏令时信息。
+ * 通常，我们只在从serverCron（）调用此函数时更新此类信息，而在从call（）调用时不更新。
+ * */
 void updateCachedTime(int update_daylight_info) {
     server.ustime = ustime();
     server.mstime = server.ustime / 1000;
@@ -2301,7 +2123,8 @@ void updateCachedTime(int update_daylight_info) {
      *
      * 要获得有关夏令时的信息，我们需要调用localtime_r并缓存结果。然而，在此
      * 上下文中调用localtime_r是安全的，因为在这里，在主线程中，我们永远不会
-     * 分叉（）。日志记录函数将调用一个没有锁的线程安全版本的localtime。*/
+     * 分叉（）。日志记录函数将调用一个没有锁的线程安全版本的localtime。
+     * */
     if (update_daylight_info) {
         struct tm tm;
         time_t ut = server.unixtime;
@@ -2328,8 +2151,8 @@ void checkChildrenDone(void) {
          *
          * sigKillChildHandler捕获信号并调用exit（），但我们必须确保
          * 不要错误地标记lastbgsave_status等。我们可以通过SIGUSR1直
-         * 接终止子进程而不进行处理，但在这种情况下，Valgrind将记录一个令人讨厌的错
-         * 误。*/
+         * 接终止子进程而不进行处理，但在这种情况下，Valgrind将记录一个令人讨厌的错 误。
+         * */
         if (exitcode == SERVER_CHILD_NOERROR_RETVAL) {
             bysignal = SIGUSR1;
             exitcode = 1;
@@ -2398,6 +2221,7 @@ void checkChildrenDone(void) {
  * Everything directly called here will be called server.hz times per second,
  * so in order to throttle execution of things we want to do less frequently
  * a macro is used: run_with_period(milliseconds) { .... }
+ *
  * 因为在这个函数中直接调用的函数都会以 REDIS_HZ 频率调用，
  * 为了调整部分函数执行的频率，使用了 run_with_period(ms) { ... }
  * 来修改代码的执行频率
@@ -2413,8 +2237,7 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     /* Software watchdog: deliver the SIGALRM that will reach the signal
      * handler if we don't return here fast enough. 
      *
-     * 软件看门狗：如果我们没有足够快地返回到这里，则传递将到达信号处理程序的SIGAL
-     * RM。*/
+     * 软件看门狗：如果我们没有足够快地返回到这里，则传递将到达信号处理程序的SIGALRM。*/
     if (server.watchdog_period) watchdogScheduleSignal(server.watchdog_period);
 
     /* Update the time cache. 
@@ -2435,7 +2258,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * many clients, we want to call serverCron() with an higher frequency. 
      *
      * 根据配置的客户端数量调整server.hz值。如果我们有很多客户端，我们希望调用
-     * serverCron（）的频率更高。*/
+     * serverCron（）的频率更高。
+     * */
 
     // 如果配置是自适应，动态变化的
     if (server.dynamic_hz) {
@@ -2507,17 +2331,19 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * Note that you can change the resolution altering the
      * LRU_CLOCK_RESOLUTION define. 
      *
-     * 对于LRU信息，每个对象只有LRU_BITS位。因此，我们使用（最终包装）LRU
-     * 时钟。请注意，即使计数器包装并不是什么大问题，一切都会正常工作，但有些对象对Re
-     * dis来说会显得更年轻。然而，如果发生这种情况，在计数器进行包装所需的所有时间内
-     * ，永远不应该触摸给定的对象，这是不可能的。请注意，您可以更改LRU_CLOCK_
-     * resolution定义的分辨率。*/
+     * 对于LRU信息，每个对象只有LRU_BITS位。因此，我们使用（最终包装）LRU时钟。
+     *
+     * 请注意，即使计数器包装并不是什么大问题，一切都会正常工作，但有些对象对Re
+     * dis来说会显得更年轻。然而，如果发生这种情况，在计数器进行包装所需的所有时间内，
+     * 永远不应该触摸给定的对象，这是不可能的。
+     *
+     * 请注意，您可以更改 LRU_CLOCK_RESOLUTION 定义的分辨率。*/
     server.lruclock = getLRUClock();
 
     /* Record the max memory used since the server was started. 
      *
-     * 记录自服务器启动以来使用的最大内存。*/
-    // 记录服务器启动以来的内存最高峰
+     * 记录自服务器启动以来使用的最大内存。
+     * */
     if (zmalloc_used_memory() > server.stat_peak_memory)
         server.stat_peak_memory = zmalloc_used_memory();
 
@@ -2526,9 +2352,9 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
          * We must sample the zmalloc_used at the same time we take the rss, otherwise
          * the frag ratio calculate may be off (ratio of two samples at different times) 
          *
-         * 在这里对RSS和其他指标进行采样，因为这是一个相对较慢的调用。我们必须在获取rs
-         * s的同时对所使用的zmalloc_used进行采样，否则碎片比率计算可能会出错（
-         * 不同时间两个样本的比率）*/
+         * 在这里对RSS和其他指标进行采样，因为这是一个相对较慢的调用。我们必须在获取rss的同时
+         * 对所使用的zmalloc_used进行采样，否则碎片比率计算可能会出错（不同时间两个样本的比率）
+         * */
         server.cron_malloc_stats.process_rss = zmalloc_get_rss();
         server.cron_malloc_stats.zmalloc_used = zmalloc_used_memory();
         /* Sampling the allcator info can be slow too.
@@ -2577,8 +2403,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* Show some info about non-empty databases 
      *
-     * 显示有关非空数据库的一些信息*/
-    // 记录非空数据库的信息
+     * 显示有关非空数据库的一些信息
+     * */
     run_with_period(5000) {
         for (j = 0; j < server.dbnum; j++) {
             long long size, used, vkeys;
@@ -2588,17 +2414,15 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
             vkeys = dictSize(server.db[j].expires);
             if (used || vkeys) {
                 serverLog(LL_VERBOSE,"DB %d: %lld keys (%lld volatile) in %lld slots HT.",j,used,vkeys,size);
-                /* dictPrintStats(server.dict); 
-                 *
-                 * dictPrintStats（server.dict）；*/
+                /* dictPrintStats(server.dict); */
             }
         }
     }
 
     /* Show information about connected clients 
      *
-     * 显示有关已连接客户端的信息*/
-    // 显示已连接客户端的信息
+     * 显示有关已连接客户端的信息
+     * */
     if (!server.sentinel_mode) {
         run_with_period(5000) {
             serverLog(LL_DEBUG,
@@ -2611,21 +2435,21 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* We need to do a few operations on clients asynchronously. 
      *
-     * 我们需要在客户端上异步执行一些操作。*/
+     * 我们需要在客户端上异步执行一些操作。
+     * */
     // 运行客户端定时任务
     clientsCron();
 
     /* Handle background operations on Redis databases. 
      *
-     * 处理Redis数据库的后台操作。*/
-    // 运行数据库定时任务
+     * 处理Redis数据库的后台操作。
+     * */
     databasesCron();
 
     /* Start a scheduled AOF rewrite if this was requested by the user while
      * a BGSAVE was in progress. 
      *
      * 如果在执行BGSAVE时用户请求，则启动计划的AOF重写。*/
-    // 如果用户执行 BGREWRITEAOF 命令的话，在后台开始 AOF 重写
     if (!hasActiveChildProcess() &&
         server.aof_rewrite_scheduled)
     {
@@ -2634,7 +2458,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* Check if a background saving or AOF rewrite in progress terminated. 
      *
-     * 检查正在进行的后台保存或AOF重写是否已终止。*/
+     * 检查正在进行的后台保存或AOF重写是否已终止。
+     * */
     if (hasActiveChildProcess() || ldbPendingChildren())
     {
         checkChildrenDone();
@@ -2642,8 +2467,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
         /* If there is not a background saving/rewrite in progress check if
          * we have to save/rewrite now. 
          *
-         * 如果没有后台保存/重写正在进行中，请检查是否必须立即保存/重写。*/
-        // 如果有需要，开始 RDB 文件的保存
+         * 如果没有后台保存/重写正在进行中，请检查是否必须立即保存/重写。
+         * */
         for (j = 0; j < server.saveparamslen; j++) {
             struct saveparam *sp = server.saveparams+j;
 
@@ -2653,8 +2478,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
              * CONFIG_BGSAVE_RETRY_DELAY seconds already elapsed. 
              *
              * 如果我们达到了给定的更改量、给定的秒数，并且最近的bgsave成功，或者在出现错
-             * 误的情况下，至少已经过了CONFIG_bgsave_RETY_DELAY秒，则保
-             * 存。*/
+             * 误的情况下，至少已经过了 CONFIG_BGSAVE_RETRY_DELAY 秒，则保 存。
+             * */
             if (server.dirty >= sp->changes &&
                 server.unixtime-server.lastsave > sp->seconds &&
                 (server.unixtime-server.lastbgsave_try >
@@ -2672,7 +2497,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
         /* Trigger an AOF rewrite if needed. 
          *
-         * 如果需要，触发AOF重写。*/
+         * 如果需要，触发AOF重写。
+         * */
         if (server.aof_state == AOF_ON &&
             !hasActiveChildProcess() &&
             server.aof_rewrite_perc &&
@@ -2690,14 +2516,17 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     /* Just for the sake of defensive programming, to avoid forgeting to
      * call this function when need. 
      *
-     * 只是为了进行防御性编程，以避免在需要时忘记调用此函数。*/
+     * 只是为了进行防御性编程，以避免在需要时忘记调用此函数。
+     * */
     updateDictResizePolicy();
 
 
     /* AOF postponed flush: Try at every cron cycle if the slow fsync
      * completed. 
      *
-     * AOF延迟刷新：如果慢速fsync完成，请在每个cron周期尝试。*/
+     * AOF延迟刷新：如果慢速fsync完成，请在每个cron周期尝试。
+     * */
+
     // 如果有需要，保存 AOF 文件到硬盘
     if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
 
@@ -2706,9 +2535,9 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * however to try every second is enough in case of 'hz' is set to
      * a higher frequency. 
      *
-     * AOF写入错误：在这种情况下，我们也有一个缓冲区要刷新，并在成功的情况下清除AO
-     * F错误，以使DB再次可写，但在“hz”设置为更高频率的情况下，每秒尝试一次就足够
-     * 了。*/
+     * AOF写入错误：在这种情况下，我们也有一个缓冲区要刷新，并在成功的情况下清除AOF错误，
+     * 以使DB再次可写，但在“hz”设置为更高频率的情况下，每秒尝试一次就足够了。
+     * */
     run_with_period(1000) {
         if (server.aof_last_write_status == C_ERR)
             flushAppendOnlyFile(0);
@@ -2724,35 +2553,36 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
     /* Replication cron function -- used to reconnect to master,
      * detect transfer failures, start background RDB transfers and so forth. 
      *
-     * 复制cron函数——用于重新连接到master、检测传输失败、启动后台RDB传输
-     * 等等。*/
-    // 进行定期同步
+     * 复制cron函数——用于重新连接到master、检测传输失败、启动后台RDB传输等等。
+     * */
     run_with_period(1000) replicationCron();
 
     /* Run the Redis Cluster cron. 
      *
-     * 运行Redis Cluster cron。*/
-    // 运行集群定期任务
+     * 运行集群定期任务。
+     * */
     run_with_period(100) {
         if (server.cluster_enabled) clusterCron();
     }
 
     /* Run the Sentinel timer if we are in sentinel mode. 
      *
-     * 如果我们处于哨兵模式，请运行哨兵计时器。*/
-    // 运行监视器计时器
+     * 如果我们处于哨兵模式，请运行哨兵计时器。
+     * */
     if (server.sentinel_mode) sentinelTimer();
 
     /* Cleanup expired MIGRATE cached sockets. 
      *
-     * 清理过期的MIGRATE缓存套接字。*/
+     * 清理过期的MIGRATE缓存套接字。
+     * */
     run_with_period(1000) {
         migrateCloseTimedoutSockets();
     }
 
     /* Stop the I/O threads if we don't have enough pending work. 
      *
-     * 如果没有足够的挂起工作，请停止I/O线程。*/
+     * 如果没有足够的挂起工作，请停止I/O线程。
+     * */
     stopThreadedIOIfNeeded();
 
     /* Resize tracking keys table if needed. This is also done at every
@@ -2762,7 +2592,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      *
      * 根据需要调整跟踪关键字表的大小。这也在每次执行命令时完成，但我们希望确保，如果执
      * 行的最后一个命令通过CONFIG SET更改了值，则即使完全空闲，服务器也会执行
-     * 该操作。*/
+     * 该操作。
+     * */
     if (server.tracking_clients) trackingLimitUsedSlots();
 
     /* Start a scheduled BGSAVE if the corresponding flag is set. This is
@@ -2774,9 +2605,11 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * because we want to give priority to RDB savings for replication. 
      *
      * 如果设置了相应的标志，则启动计划的BGSAVE。当我们因为AOF重写正在进行而被
-     * 迫推迟BGSAVE时，这很有用。注意：此代码必须在上面的replicationC
-     * ron（）调用之后，因此在重构此文件时请确保保持此顺序。这很有用，因为我们希望优
-     * 先考虑为复制节省RDB。*/
+     * 迫推迟BGSAVE时，这很有用。
+     *
+     * 注意：此代码必须在上面的replicationCron（）调用之后，
+     * 因此在重构此文件时请确保保持此顺序。这很有用，因为我们希望优先考虑为复制节省RDB。
+     * */
     if (!hasActiveChildProcess() &&
         server.rdb_bgsave_scheduled &&
         (server.unixtime-server.lastbgsave_try > CONFIG_BGSAVE_RETRY_DELAY ||
@@ -2790,7 +2623,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
 
     /* Fire the cron loop modules event. 
      *
-     * 激发cron循环模块事件。*/
+     * 激发cron循环模块事件。
+     * */
     RedisModuleCronLoopV1 ei = {REDISMODULE_CRON_LOOP_VERSION,server.hz};
     moduleFireServerEvent(REDISMODULE_EVENT_CRON_LOOP,
                           0,
@@ -2818,11 +2652,14 @@ extern int ProcessingEventsWhileBlocked;
  * call some other low-risk functions. 
  *
  * 每当Redis进入事件驱动库的主循环时，也就是说，在为就绪文件描述符休眠之前，都
- * 会调用此函数。注意：此函数（当前）是从两个函数调用的：1。aeMain-主服务器
- * 循环2。processEventsWhileBlocked-在RDB/AOF加载
- * 期间处理客户端如果它是从processEventsWhileBlocked调用的
- * ，我们不想执行所有操作（例如，我们不希望密钥过期），但我们确实需要执行一些操作。
- * 最重要的是freeClientsInAsyncFreeQueue，但我们也调用一
+ * 会调用此函数。
+ *
+ * 注意：此函数（当前）是从两个函数调用的：
+ * 1。aeMain-主服务器循环
+ * 2。processEventsWhileBlocked-在RDB/AOF加载期间处理客户端
+ *
+ * 如果它是从processEventsWhileBlocked调用的，我们不想执行所有操作（例如，我们不希望密钥过期），
+ * 但我们确实需要执行一些操作。最重要的是freeClientsInAsyncFreeQueue，但我们也调用一
  * 些其他低风险函数。*/
 // 每次在运行事件 loop 之前，这个函数都会被运行一次
 void beforeSleep(struct aeEventLoop *eventLoop) {
@@ -2854,7 +2691,8 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
 
     /* Handle precise timeouts of blocked clients. 
      *
-     * 处理被阻止客户端的精确超时。*/
+     * 处理被阻止客户端的精确超时。
+     * */
     handleBlockedClientsTimeout();
 
     /* We should handle pending reads clients ASAP after event loop. 
@@ -2942,7 +2780,6 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     /* Write the AOF buffer on disk 
      *
      * 在磁盘上写入AOF缓冲区*/
-    // 如果有需要的话，尝试保存 AOF 到磁盘
     flushAppendOnlyFile(0);
 
     /* Handle writes with pending output buffers. 
@@ -2953,16 +2790,14 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
     /* Close clients that need to be closed asynchronous 
      *
      * 关闭需要异步关闭的客户端*/
-    // 关闭那些需要异步删除的客户端
     freeClientsInAsyncFreeQueue();
 
     /* Try to process blocked clients every once in while. Example: A module
      * calls RM_SignalKeyAsReady from within a timer callback (So we don't
      * visit processCommand() at all). 
      *
-     * 尝试每隔一段时间处理被阻止的客户端。示例：一个模块从计时器回调中调用RM_Sig
-     * nalKeyAsReady（因此我们根本不访问processCommand（））
-     * 。*/
+     * 尝试每隔一段时间处理被阻止的客户端。示例：一个模块从计时器回调中调用
+     * RM_SignalKeyAsReady（因此我们根本不访问processCommand（））。*/
     handleClientsBlockedOnKeys();
 
     /* Before we are going to sleep, let the threads access the dataset by
@@ -2982,8 +2817,7 @@ void beforeSleep(struct aeEventLoop *eventLoop) {
  * API returned, and the control is going to soon return to Redis by invoking
  * the different events callbacks. 
  *
- * 此函数在事件循环复用API返回后立即调用，控件将很快通过调用不同的事件回调返回R
- * edis。*/
+ * 此函数在事件循环复用API返回后立即调用，控件将很快通过调用不同的事件回调返回Redis。*/
 void afterSleep(struct aeEventLoop *eventLoop) {
     UNUSED(eventLoop);
 
@@ -3190,15 +3024,9 @@ void initServerConfig(void) {
     server.lruclock = getLRUClock();
     resetServerSaveParams();
 
-    appendServerSaveParams(60*60,1);  /* save after 1 hour and 1 change 
-                                       *
-                                       * 1小时1次更改后保存*/
-    appendServerSaveParams(300,100);  /* save after 5 minutes and 100 changes 
-                                       *
-                                       * 5分钟和100次更改后保存*/
-    appendServerSaveParams(60,10000); /* save after 1 minute and 10000 changes 
-                                       *
-                                       * 在1分钟和10000次更改后保存*/
+    appendServerSaveParams(60*60,1);  /* save after 1 hour and 1 change  1小时1次更改后保存*/
+    appendServerSaveParams(300,100);  /* save after 5 minutes and 100 changes 5分钟和100次更改后保存*/
+    appendServerSaveParams(60,10000); /* save after 1 minute and 10000 changes 在1分钟和10000次更改后保存*/
 
     /* Replication related 
      *
@@ -3252,8 +3080,7 @@ void initServerConfig(void) {
      * initial configuration, since command names may be changed via
      * redis.conf using the rename-command directive. 
      *
-     * 命令表——我们在这里初始化它，因为它是初始配置的一部分，因为命令名称可以通过re
-     * dis.conf使用rename命令指令进行更改。*/
+     * 命令表——我们在这里初始化它，因为它是初始配置的一部分，因为命令名称可以通过redis.conf使用rename命令指令进行更改。*/
     server.commands = dictCreate(&commandTableDictType,NULL);
     server.orig_commands = dictCreate(&commandTableDictType,NULL);
     populateCommandTable();
@@ -3287,8 +3114,7 @@ void initServerConfig(void) {
      * Redis 5. However it is possible to revert it via redis.conf. 
      *
      * 默认情况下，我们希望脚本始终通过效果（脚本执行的单个命令）进行复制，而不是通过将
-     * 脚本发送到从属/AOF。这是从Redis 5开始的新方式。但是，可以通过redi
-     * s.conf将其还原。*/
+     * 脚本发送到从属/AOF。这是从Redis 5开始的新方式。但是，可以通过redis.conf将其还原。*/
     server.lua_always_replicate_commands = 1;
 
     initConfigValues();
@@ -3312,13 +3138,16 @@ extern char **environ;
  * On success the function does not return, because the process turns into
  * a different process. On error C_ERR is returned. 
  *
- * 重新启动服务器，使用相同的参数和配置文件执行启动此实例的相同可执行文件。该函数被
- * 设计为直接调用execve（），以便新的服务器实例将保留上一个实例的PID。可以
- * 按位或组合在一起的标志列表会改变此函数的行为：RESTART_SERVER_NO
- * NE无标志。RESTART_SERVER_GRACEFULLY在重新启动之前进行
- * 适当的关闭。RESTART_SERVER_CONFIG_REWRITE在重新启动
- * 之前重写配置文件。一旦成功，函数就不会返回，因为过程会变成一个不同的过程。返回错
- * 误时C_ERR。*/
+ * 重新启动服务器，使用相同的参数和配置文件执行启动此实例的相同可执行文件。
+ *
+ * 该函数被设计为直接调用execve（），以便新的服务器实例将保留上一个实例的PID。
+ *
+ * 可以按位或组合在一起的标志列表会改变此函数的行为：
+ * RESTART_SERVER_NONE无标志。
+ * RESTART_SERVER_GRACEFULLY在重新启动之前进行适当的关闭。
+ * RESTART_SERVER_CONFIG_REWRITE在重新启动之前重写配置文件。
+ *
+ * 一旦成功，函数就不会返回，因为过程会变成一个不同的过程。返回错误时C_ERR。*/
 int restartServer(int flags, mstime_t delay) {
     int j;
 
@@ -3363,8 +3192,7 @@ int restartServer(int flags, mstime_t delay) {
         /* Test the descriptor validity before closing it, otherwise
          * Valgrind issues a warning on close(). 
          *
-         * 在关闭描述符之前测试描述符的有效性，否则Valgrind会在close（）上发出
-         * 警告。*/
+         * 在关闭描述符之前测试描述符的有效性，否则Valgrind会在close（）上发出警告。*/
         if (fcntl(j,F_GETFD) != -1) close(j);
     }
 
@@ -3484,8 +3312,8 @@ void adjustOpenFilesLimit(void) {
             /* Try to set the file limit to match 'maxfiles' or at least
              * to the higher value supported less than maxfiles. 
              *
-             * 请尝试将文件限制设置为匹配“maxfiles”，或者至少设置为支持的比maxfi
-             * les更小的值。*/
+             * 请尝试将文件限制设置为匹配“maxfiles”，或者至少设置为支持的比maxfiles更小的值。
+             * */
             bestlimit = maxfiles;
             while(bestlimit > oldlimit) {
                 rlim_t decr_step = 16;
@@ -3552,8 +3380,7 @@ void adjustOpenFilesLimit(void) {
 /* Check that server.tcp_backlog can be actually enforced in Linux according
  * to the value of /proc/sys/net/core/somaxconn, or warn about it. 
  *
- * 检查server.tcp_backlog是否可以根据/proc/sys/net/
- * core/somaxconn的值在Linux中实际执行，或者对此发出警告。*/
+ * 检查server.tcp_backlog是否可以根据/proc/sys/net/core/somaxconn的值在Linux中实际执行，或者对此发出警告。*/
 void checkTcpBacklogSettings(void) {
 #ifdef HAVE_PROC_SOMAXCONN
     FILE *fp = fopen("/proc/sys/net/core/somaxconn","r");
@@ -3592,15 +3419,13 @@ void checkTcpBacklogSettings(void) {
  * 听文件描述符存储在整数数组“fds”中，其编号设置为“*count”。
  *
  * 要绑定的地 址在全局server.bindaddr数组中指定，其编号为server.bind
- * addr_count。如果服务器配置不包含要绑定的特定地址，则此函数将尝试为IP
- * v4和IPv6协议绑定（所有地址）。
+ * addr_count。如果服务器配置不包含要绑定的特定地址，则此函数将尝试为IPv4和IPv6协议绑定（所有地址）。
  *
- * 成功后，函数返回C_OK。出现错误时，函数返
- * 回C_ERR。
+ * 成功后，函数返回C_OK。出现错误时，函数返回C_ERR。
  *
- * 对于出现错误的函数，至少有一个服务器.bindaddr地址无法绑定
- * ，或者在服务器配置中未指定绑定地址，但该函数无法绑定IPv4或IPv6协议中的至
- * 少一个。*/
+ * 对于出现错误的函数，至少有一个服务器.bindaddr地址无法绑定，或者在服务器配置中未指定绑定地址，
+ * 但该函数无法绑定IPv4或IPv6协议中的至少一个。
+ * */
 int listenToPort(int port, int *fds, int *count) {
     int j;
 
@@ -3615,8 +3440,7 @@ int listenToPort(int port, int *fds, int *count) {
             /* Bind * for both IPv6 and IPv4, we enter here only if
              * server.bindaddr_count == 0. 
              *
-             * 绑定IPv6和IPv4，只有当server.bindaddr_count==0时
-             * ，我们才会在此处输入。*/
+             * 绑定IPv6和IPv4，只有当server.bindaddr_count==0时，我们才会在此处输入。*/
             fds[*count] = anetTcp6Server(server.neterr,port,NULL,
                 server.tcp_backlog);
             if (fds[*count] != ANET_ERR) {
@@ -3645,8 +3469,7 @@ int listenToPort(int port, int *fds, int *count) {
              * otherwise fds[*count] will be ANET_ERR and we'll print an
              * error and return to the caller with an error. 
              *
-             * 如果我们能够绑定IPv4和IPv6，请退出循环，否则fds[*count]将为A
-             * NET_ERR，我们将打印一个错误并返回给调用者。*/
+             * 如果我们能够绑定IPv4和IPv6，请退出循环，否则fds[*count]将为ANET_ERR，我们将打印一个错误并返回给调用者。*/
             if (*count + unsupported == 2) break;
         } else if (strchr(server.bindaddr[j],':')) {
             /* Bind IPv6 address. 
@@ -3683,8 +3506,8 @@ int listenToPort(int port, int *fds, int *count) {
  * to reset via CONFIG RESETSTAT. The function is also used in order to
  * initialize these fields in initServer() at server startup. 
  *
- * 重置我们通过INFO或其他方式暴露的统计信息，我们希望通过CONFIG RESE
- * TSTAT重置这些统计信息。该函数还用于在服务器启动时初始化initServer
+ * 重置我们通过INFO或其他方式暴露的统计信息，我们希望通过CONFIG RESETSTAT重置这些统计信息。
+ * 该函数还用于在服务器启动时初始化initServer
  * （）中的这些字段。*/
 void resetServerStats(void) {
     int j;
@@ -3730,9 +3553,9 @@ void resetServerStats(void) {
  * can work reliably (default cancelability type is PTHREAD_CANCEL_DEFERRED).
  * Needed for pthread_cancel used by the fast memory test used by the crash report. 
  *
- * 使线程在任何时候都可以kill，这样kill线程函数就可以可靠地工作（默认的ca
- * ncellability类型是PTHREAD_CANCEL_DEFERRED）。
- * 崩溃报告使用的快速内存测试所使用的pthread_cancel需要。*/
+ * 使线程在任何时候都可以kill，这样kill线程函数就可以可靠地工作（默认的cancellability类型是PTHREAD_CANCEL_DEFERRED）。
+ * 崩溃报告使用的快速内存测试所使用的pthread_cancel需要。
+ * */
 void makeThreadKillable(void) {
     pthread_setcancelstate(PTHREAD_CANCEL_ENABLE, NULL);
     pthread_setcanceltype(PTHREAD_CANCEL_ASYNCHRONOUS, NULL);
@@ -3847,7 +3670,6 @@ void initServer(void) {
     /* Create the Redis databases, and initialize other internal state. 
      *
      * 创建Redis数据库，并初始化其他内部状态。*/
-    // 初始化数据库
     for (j = 0; j < server.dbnum; j++) {
         // key space
         server.db[j].dict = dictCreate(&dbDictType,NULL);
@@ -3933,8 +3755,7 @@ void initServer(void) {
      * operations incrementally, like clients timeout, eviction of unaccessed
      * expired keys and so forth. 
      *
-     * 创建定时器回调，这是我们增量处理许多后台操作的方法，如客户端超时、驱逐未处理的过
-     * 期密钥等等。*/
+     * 创建定时器回调，这是我们增量处理许多后台操作的方法，如客户端超时、驱逐未处理的过期密钥等等。*/
     // 关联 server cron 到时间事件
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
@@ -3981,8 +3802,7 @@ void initServer(void) {
     /* Register before and after sleep handlers (note this needs to be done
      * before loading persistence since it is used by processEventsWhileBlocked. 
      *
-     * 注册睡眠前和睡眠后处理程序（注意，这需要在加载持久性之前完成，因为它由proce
-     * ssEventsWhileBlocked使用。*/
+     * 注册睡眠前和睡眠后处理程序（注意，这需要在加载持久性之前完成，因为它由processEventsWhileBlocked使用。*/
     // 设置事件执行前要运行的函数
     aeSetBeforeSleepProc(server.el,beforeSleep);
     aeSetAfterSleepProc(server.el,afterSleep);
@@ -4007,8 +3827,7 @@ void initServer(void) {
      * useless crashes of the Redis instance for out of memory. 
      *
      * 32位实例的地址空间限制为4GB，因此，如果用户提供的配置中没有明确的限制，我们
-     * 将使用“noevision”策略的maxmemory将限制设置为3 GB。这避免
-     * 了Redis实例因内存不足而发生无用的崩溃。*/
+     * 将使用“noevision”策略的maxmemory将限制设置为3 GB。这避免了Redis实例因内存不足而发生无用的崩溃。*/
     // 设置内存限制
     if (server.arch_bits == 32 && server.maxmemory == 0) {
         serverLog(LL_WARNING,"Warning: 32 bit instance detected but no memory limit set. Setting 3 GB maxmemory limit with 'noeviction' policy now.");
@@ -4036,8 +3855,7 @@ void initServer(void) {
  *
  * 服务器初始化中的一些步骤需要最后完成（在加载模块之后）。具体来说，由于ld.so
  * 中的争用错误而创建线程，在该错误中，线程本地存储初始化与dlopen调用冲突。请
- * 参阅：https://sourceware.org/bugzilla/show_
- * bug.cgi?id=19329*/
+ * 参阅：https://sourceware.org/bugzilla/showbug.cgi?id=19329*/
 void InitServerLast() {
     bioInit();
     initThreadedIO();
@@ -4137,9 +3955,9 @@ void populateCommandTable(void) {
         if (populateCommandTableParseFlags(c,c->sflags) == C_ERR)
             serverPanic("Unsupported command flag");
 
-        c->id = ACLGetCommandID(c->name); /* Assign the ID used for ACL. 
-                                           *
-                                           * 分配用于ACL的ID。*/
+        c->id = ACLGetCommandID(c->name);  /* Assign the ID used for ACL.
+                                                     *
+                                                     * 分配用于ACL的ID。*/
         retval1 = dictAdd(server.commands, sdsnew(c->name), c);
         /* Populate an additional dictionary that will be unaffected
          * by rename-command statements in redis.conf. 
@@ -4242,10 +4060,9 @@ struct redisCommand *lookupCommandByCString(const char *s) {
  * rewriteClientCommandVector() in order to set client->cmd pointer
  * correctly even if the command was renamed. 
  *
- * 在当前表中查找命令，如果未找到，还请检入包含不受redis.conf renam
- * e命令语句影响的原始命令名的原始表。重写参数向量的函数（如rewriteClie
- * ntCommandVector（））使用此函数，以便正确设置客户端->cmd指针
- * ，即使命令已重命名。*/
+ * 在当前表中查找命令，如果未找到，还请检入包含不受redis.conf rename命令语句影响的原始命令名的原始表。
+ * 重写参数向量的函数（如rewriteClie ntCommandVector（））使用此函数，以便正确设置客户端->cmd指针，
+ * 即使命令已重命名。*/
 struct redisCommand *lookupCommandOrOriginal(sds name) {
     struct redisCommand *cmd = dictFetchValue(server.commands, name);
 
@@ -4293,12 +4110,13 @@ void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
  * stack allocated).  The function automatically increments ref count of
  * passed objects, so the caller does not need to. 
  *
- * 在命令内部使用，以便在当前命令传播到AOF/Replication之后安排其他命
- * 令的传播。'cmd”必须是指向要复制的Redis命令的指针，dbid是该命令应传
- * 播到的数据库ID。要传播的命令的参数作为len“argc”的redis对象指针数
- * 组传递，使用“argv”向量。该函数不引用传递的“argv”向量，因此由调用方释
- * 放传递的argv（但通常是堆栈分配的）。函数会自动增加传递对象的ref计数，因此
- * 调用方不需要这样做。*/
+ * 在命令内部使用，以便在当前命令传播到AOF/Replication之后安排其他命令的传播。
+ *
+ * 'cmd”必须是指向要复制的Redis命令的指针，dbid是该命令应传
+ * 播到的数据库ID。要传播的命令的参数作为len“argc”的redis对象指针数组传递，使用“argv”向量。
+ *
+ * 该函数不引用传递的“argv”向量，因此由调用方释
+ * 放传递的argv（但通常是堆栈分配的）。函数会自动增加传递对象的ref计数，因此调用方不需要这样做。*/
 void alsoPropagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
                    int target)
 {
@@ -4321,8 +4139,7 @@ void alsoPropagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
  * Redis command implementation in order to to force the propagation of a
  * specific command execution into AOF / Replication. 
  *
- * 可以在Redis命令实现中调用函数forceCommandPropagation
- * （），以强制将特定命令执行传播到AOF/Replication中。*/
+ * 可以在Redis命令实现中调用函数forceCommandPropagation），以强制将特定命令执行传播到AOF/Replication中。*/
 void forceCommandPropagation(client *c, int flags) {
     if (flags & PROPAGATE_REPL) c->flags |= CLIENT_FORCE_REPL;
     if (flags & PROPAGATE_AOF) c->flags |= CLIENT_FORCE_AOF;
@@ -4332,8 +4149,7 @@ void forceCommandPropagation(client *c, int flags) {
  * are free to just propagate what we want using the alsoPropagate()
  * API. 
  *
- * 避免传播执行的命令。通过这种方式，我们可以自由地使用alsoPropagate（
- * ）API来传播我们想要的内容。*/
+ * 避免传播执行的命令。通过这种方式，我们可以自由地使用alsoPropagate（）API来传播我们想要的内容。*/
 void preventCommandPropagation(client *c) {
     c->flags |= CLIENT_PREVENT_PROP;
 }
@@ -4399,10 +4215,7 @@ void call(client *c, int flags) {
     /* Send the command to clients in MONITOR mode if applicable.
      * Administrative commands are considered too dangerous to be shown. 
      *
-     * 如果适用，在MONITOR模式下向客户端发送命令。行政命令被认为过于危险，无法显
-     * 示。*/
-    // 如果命令不是来自于 AOF 文件，并且命令可以发送给 MONITOR
-    // 那么将命令发送给 MONITOR
+     * 如果适用，在MONITOR模式下向客户端发送命令。行政命令被认为过于危险，无法显示。*/
     if (listLength(server.monitors) &&
         !server.loading &&
         !(c->cmd->flags & (CMD_SKIP_MONITOR|CMD_ADMIN)))
@@ -4453,8 +4266,7 @@ void call(client *c, int flags) {
     /* When EVAL is called loading the AOF we don't want commands called
      * from Lua to go into the slowlog or to populate statistics. 
      *
-     * 当调用EVAL加载AOF时，我们不希望从Lua调用的命令进入慢日志或填充统计信息
-     * 。*/
+     * 当调用EVAL加载AOF时，我们不希望从Lua调用的命令进入慢日志或填充统计信息。*/
     // 命令由 AOF 文件在 lua 脚本中执行时
     // 不开启 slowlog 和 统计功能
     if (server.loading && c->flags & CLIENT_LUA)
@@ -4555,8 +4367,7 @@ void call(client *c, int flags) {
      * by CLIENT_PREVENT_PROP flag. 
      *
      * 处理alsoPropagate（）API以处理要传播多个单独命令的命令。请注意，
-     * alsoPropagate（）不受CLIENT_PREVENT_PROP标志的影
-     * 响。*/
+     * alsoPropagate（）不受CLIENT_PREVENT_PROP标志的影响。*/
     if (server.also_propagate.numops) {
         int j;
         redisOp *rop;
@@ -4570,9 +4381,8 @@ void call(client *c, int flags) {
              * And if the array contains only one command, no need to
              * wrap it, since the single command is atomic. 
              *
-             * 将命令包装在server.also_pagate数组中，但如果我们已经在MULT
-             * I上下文中，则不要包装它，以防嵌套的MULTI/EXEC。如果数组只包含一个命令
-             * ，则无需包装它，因为单个命令是原子命令。*/
+             * 将命令包装在server.also_pagate数组中，但如果我们已经在MULTI上下文中，则不要包装它，以防嵌套的MULTI/EXEC。
+             * 如果数组只包含一个命令，则无需包装它，因为单个命令是原子命令。*/
             if (server.also_propagate.numops > 1 &&
                 !(c->cmd->flags & CMD_MODULE) &&
                 !(c->flags & CLIENT_MULTI) &&
@@ -4635,8 +4445,7 @@ void call(client *c, int flags) {
  * Note: 'reply' is expected to end with \r\n 
  *
  * 当准备执行的命令由于各种执行前检查而需要被拒绝时使用。它将适当的错误返回给客户端
- * 。如果存在事务is，则将其标记为脏，如果命令为EXEC，则中止该事务。注意：“r
- * eply”应以\r结尾*/
+ * 。如果存在事务is，则将其标记为脏，如果命令为EXEC，则中止该事务。注意：“reply”应以\r结尾*/
 void rejectCommand(client *c, robj *reply) {
     flagTransaction(c);
     if (c->cmd && c->cmd->proc == execCommand) {
@@ -4680,6 +4489,7 @@ void rejectCommandFormat(client *c, const char *fmt, ...) {
  *
  * 如果调用此函数，我们已经读取了整个命令，参数位于客户端 argv/argc 字段中。
  * processCommand（） 执行命令或准备服务器以从客户端批量读取。
+ *
  * 如果返回C_OK则客户端仍处于活动状态且有效，调用方可以执行其他操作。
  * 否则，如果返回C_ERR则客户端将被销毁（即在 QUIT 之后）。
  *
@@ -4772,8 +4582,8 @@ int processCommand(client *c) {
      *
      * 如果启用了群集，请在此处执行群集重定向。
      * 但是，如果出现以下情况，我们不会执行重定向：
-     * 1）此命令的发送方是我们的主。
-     * 2） 该命令没有键参数。*/
+     * 1）此命令的发送方是我们的主节点。
+     * 2）该命令没有键参数。*/
     if (server.cluster_enabled &&
         !(c->flags & CLIENT_MASTER) &&
         !(c->flags & CLIENT_LUA &&
@@ -5033,8 +4843,7 @@ int prepareForShutdown(int flags) {
      * Also when in Sentinel mode clear the SAVE flag and force NOSAVE. 
      *
      * 当服务器在内存中加载数据集时调用SHUTDOWN时，我们需要确保在关闭时不会尝试
-     * 保存数据集（否则可能会用半读数据覆盖当前数据库）。此外，在Sentinel模式下
-     * ，清除SAVE标志并强制NOSAVE。*/
+     * 保存数据集（否则可能会用半读数据覆盖当前数据库）。此外，在Sentinel模式下，清除SAVE标志并强制NOSAVE。*/
     if (server.loading || server.sentinel_mode)
         flags = (flags & ~SHUTDOWN_SAVE) | SHUTDOWN_NOSAVE;
 
@@ -5065,8 +4874,8 @@ int prepareForShutdown(int flags) {
          * but OS will close this fd when process exits. 
          *
          * 注意，在killRDBChild中，我们调用rdbRemoveTempFile，
-         * 它将在后台线程中关闭fd（以便实际取消文件链接）。当redis快速退出时，临时r
-         * db文件fd可能不会关闭，但OS会在进程退出时关闭此fd。*/
+         * 它将在后台线程中关闭fd（以便实际取消文件链接）。当redis快速退出时，临时rdb文件fd可能不会关闭，
+         * 但OS会在进程退出时关闭此fd。*/
         killRDBChild();
     }
 
@@ -5082,8 +4891,7 @@ int prepareForShutdown(int flags) {
         /* Kill the AOF saving child as the AOF we already have may be longer
          * but contains the full dataset anyway. 
          *
-         * 杀死保存AOF的子项，因为我们已经拥有的AOF可能更长，但无论如何都包含完整的数
-         * 据集。*/
+         * 杀死保存AOF的子项，因为我们已经拥有的AOF可能更长，但无论如何都包含完整的数据集。*/
         if (server.aof_child_pid != -1) {
             /* If we have AOF enabled but haven't written the AOF yet, don't
              * shutdown or else the dataset will be lost. 
@@ -5125,9 +4933,8 @@ int prepareForShutdown(int flags) {
              * saving aborted, handling special stuff like slaves pending for
              * synchronization... 
              *
-             * 哦。。保存错误！我们能做的最好的事情就是继续运营。请注意，如果有后台保存过程，在
-             * 下一个cron（）中，Redis将被通知后台保存中止，处理特殊的东西，如等待同步
-             * 的从属。。。*/
+             * 哦。。保存错误！我们能做的最好的事情就是继续运行。请注意，如果有后台保存过程，在
+             * 下一个cron（）中，Redis将被通知后台保存中止，处理特殊的东西，如等待同步的从节点。。。*/
             serverLog(LL_WARNING,"Error trying to save the DB, can't exit.");
             if (server.supervised_mode == SUPERVISED_SYSTEMD)
                 redisCommunicateSystemd("STATUS=Error trying to save the DB, can't exit.\n");
@@ -5179,8 +4986,8 @@ int prepareForShutdown(int flags) {
  
  *
  * 有时Redis无法接受写入命令，因为RDB或AOF文件存在持久性错误，并且Red
- * is被配置为在这种情况下停止接受写入。如果此类条件处于活动状态，此函数将返回该条
- * 件的类型。
+ * is被配置为在这种情况下停止接受写入。如果此类条件处于活动状态，此函数将返回该条件的类型。
+ *
  * 函数返回值：
  * DISK_ERROR_TYPE_NONE：没有问题，我们可 以接受写入。
  * DISK_ERROR_TYPE_AOF:不接受写入：AOF错误。
@@ -5629,8 +5436,7 @@ sds genRedisInfoString(const char *section) {
                                      (and the next one) is named like that just
                                      for backward compatibility. 
                                    *
-                                   * 这是RSS的总开销，包括碎片，但不仅仅是碎片。为了向后兼容，这个字段（和下一个字
-                                   * 段）是这样命名的。*/
+                                   * 这是RSS的总开销，包括碎片，但不仅仅是碎片。为了向后兼容，这个字段（和下一个字段）是这样命名的。*/
             mh->total_frag_bytes,
             freeMemoryGetNotCountedMemory(),
             mh->repl_backlog,
@@ -6011,7 +5817,7 @@ sds genRedisInfoString(const char *section) {
 
     /* Key space 
      *
-     * 密钥空间*/
+     * 键空间*/
     if (allsections || defsections || !strcasecmp(section,"keyspace")) {
         if (sections++) info = sdscat(info,"\r\n");
         info = sdscatprintf(info, "# Keyspace\r\n");
@@ -6458,9 +6264,8 @@ void setupSignalHandlers(void) {
  * it in a clean way, without the parent detecting an error and stop
  * accepting writes because of a write error condition. 
  *
- * 这是子进程的信号处理程序。为了跟踪SIGUSR1，它目前很有用，我们将其发送给子
- * 级，以便以干净的方式终止它，而不会让父级检测到错误并因写入错误条件而停止接受写入
- * 。*/
+ * 这是子进程的信号处理程序。为了跟踪SIGUSR1，它目前很有用，我们将其发送给子进程，
+ * 以便以干净的方式终止它，而不会让父级检测到错误并因写入错误条件而停止接受写入。*/
 static void sigKillChildHandler(int sig) {
     UNUSED(sig);
     int level = server.in_fork_child == CHILD_TYPE_MODULE? LL_VERBOSE: LL_WARNING;
@@ -6500,7 +6305,7 @@ void closeClildUnusedResourceAfterFork() {
     /* Clear server.pidfile, this is the parent pidfile which should not
      * be touched (or deleted) by the child (on exit / crash) 
      *
-     * 清除server.pidfile，这是父级pidfile，子级不应触摸（或删除）
+     * 清除server.pidfile，这是父级pidfile，子进程不应接触（或删除）
      * （退出/崩溃时）*/
     zfree(server.pidfile);
     server.pidfile = NULL;
@@ -6550,8 +6355,7 @@ void memtest(size_t megabytes, int passes);
 /* Returns 1 if there is --sentinel among the arguments or if
  * argv[0] contains "redis-sentinel". 
  *
- * 如果参数中有--sentinel，或者argv[0]包含“redis-setin
- * el”，则返回1。*/
+ * 如果参数中有--sentinel，或者argv[0]包含“redis-sentinel”，则返回1。*/
 int checkForSentinelMode(int argc, char **argv) {
     int j;
 
@@ -6590,8 +6394,8 @@ void loadDataFromDisk(void) {
                  * of -1 inside the RDB file in a wrong way, see more
                  * information in function rdbPopulateSaveInfo. 
                  *
-                 * 请注意，旧的实现可能会以错误的方式在RDB文件中保存-1的repl_stream
-                 * _db，请参阅函数rdbPopulateSaveInfo中的更多信息。*/
+                 * 请注意，旧的实现可能会以错误的方式在RDB文件中保存-1的repl_stream_db，
+                 * 请参阅函数rdbPopulateSaveInfo中的更多信息。*/
                 rsi.repl_stream_db != -1)
             {
                 memcpy(server.replid,rsi.repl_id,sizeof(server.replid));
@@ -6600,8 +6404,7 @@ void loadDataFromDisk(void) {
                  * information, in order to allow partial resynchronizations
                  * with masters. 
                  *
-                 * 如果我们是从设备，请根据此信息创建缓存的主设备，以便允许与主设备进行部分重新同步
-                 * 。*/
+                 * 如果我们是从设备，请根据此信息创建缓存的主设备，以便允许与主设备进行部分重新同步。*/
                 replicationCacheMasterUsingMyself();
                 selectDb(server.cached_master,rsi.repl_stream_db);
             }
