@@ -1647,8 +1647,9 @@ void tryResizeHashTables(int dbid) {
 int incrementallyRehash(int dbid) {
     /* Keys dictionary 
      *
-     * 密钥字典*/
+     * 键字典*/
     if (dictIsRehashing(server.db[dbid].dict)) {
+        // 每次 rehash 100 个key，看下有没到 1毫秒了没
         dictRehashMilliseconds(server.db[dbid].dict,1);
         return 1; /* already used our millisecond for this loop... 
                    *
@@ -1748,7 +1749,6 @@ long long getInstantaneousMetric(int metric) {
  *
  * 客户端查询缓冲区是一个sds.c字符串，它可以以大量未使用的可用空间结束，如果需
  * 要，此函数会回收空间。函数始终返回0，因为它从未终止客户端。*/
-// 收缩查询缓存的空间
 int clientsCronResizeQueryBuffer(client *c) {
     size_t querybuf_size = sdsAllocSize(c->querybuf);
     time_t idletime = server.unixtime - c->lastinteraction;
@@ -1825,7 +1825,7 @@ int clientsCronResizeQueryBuffer(client *c) {
  *
  * 这就是它的工作原理。我们有一个CLIENTS_PEAK_MEM_USAGE_SLOTS
  * 插槽阵列，我们在其中跟踪每个插槽中看到的最大客户端输出和输入缓冲区。每个槽都对应
- * 于最近的一秒，因为数组是通过执行UNIXTIME%CLIENTS_PEAK_MEM_USAGE_SLOTS
+ * 于最近的一秒，因为数组是通过执行 UNIXTIME % CLIENTS_PEAK_MEM_USAGE_SLOTS
  * 进行索引的。当我们想知道最近的内存使用峰值是多少时，我
  * 们只需扫描这么少的插槽来搜索最大值。
  * */
@@ -1856,9 +1856,8 @@ int clientsCronTrackExpansiveClients(client *c) {
      *
      * 注意：如果由于某种原因没有以正常频率调用serverCron（），
      * 我们的索引可能会跳到任何随机位置，例如因为调用某个慢命令需要几秒钟才能执
-     * 行。在这种情况下，我们的数组可能最终包含的数据可能早于CLIENTS_PEAK_
-     * MEM_USAGE_SLOTS秒：但是这不是问题，因为在这里我们只想跟踪“最近”
-     * 是否有来自内存使用POV的非常广泛的客户端。*/
+     * 行。在这种情况下，我们的数组可能最终包含的数据可能早于CLIENTS_PEAK_MEM_USAGE_SLOTS秒：
+     * 但是这不是问题，因为在这里我们只想跟踪“最近”是否有来自内存使用POV的非常广泛的客户端。*/
     ClientsPeakMemInput[zeroidx] = 0;
     ClientsPeakMemOutput[zeroidx] = 0;
 
@@ -1939,16 +1938,15 @@ void getExpansiveClientsInfo(size_t *in_usage, size_t *out_usage) {
  * of clients per second, turning this function into a source of latency.
  
  *
- * 此函数由serverCron（）调用，用于在客户端上执行对持续执行非常重要的操作
- * 。例如，我们使用此函数是为了在超时后断开客户端的连接，包括在某个超时为非零的阻塞
+ * 此函数由serverCron（）调用，用于在客户端上执行对持续执行非常重要的操作。
+ * 例如，我们使用此函数是为了在超时后断开客户端的连接，包括在某个超时为非零的阻塞
  * 命令中被阻塞的客户端。
  *
- * 该函数会努力每秒处理所有客户端，即使不能严格保证这一点，因
- * 为在出现诸如慢命令之类的延迟事件时，调用serverCron（）的实际频率可能低于server.hz。
+ * 该函数会努力每秒处理所有客户端，即使不能严格保证这一点，因为在出现诸如慢命令之类的延迟事件时，
+ * 调用serverCron（）的实际频率可能低于server.hz。
  *
- * 对于这个函数及其调用的函数来说，速度非常快是非常重要的：有
- * 时Redis有数以万计的连接客户端，而默认的server.hz值是10，所以有时
- * 我们需要每秒处理数千个客户端，从而将这个函数变成延迟源。*/
+ * 对于这个函数及其调用的函数来说，速度非常快是非常重要的：有时Redis有数以万计的连接客户端，
+ * 而默认的server.hz值是10，所以有时我们需要每秒处理数千个客户端，从而将这个函数变成延迟源。*/
 #define CLIENTS_CRON_MIN_ITERATIONS 5
 /*
  * 客户端常规任务
@@ -2017,8 +2015,7 @@ void clientsCron(void) {
  * incrementally in Redis databases, such as active key expiring, resizing,
  * rehashing. 
  *
- * 此函数处理Redis数据库中需要增量执行的“后台”操作，如活动密钥过期、调整大小
- * 、重新哈希。*/
+ * 此函数处理Redis数据库中需要增量执行的“后台”操作，如活动键过期、调整大小、重新哈希。*/
 void databasesCron(void) {
     /* Expire keys by random sampling. Not required for slaves
      * as master will synthesize DELs for us. 
@@ -6105,6 +6102,7 @@ void createPidFile(void) {
     }
 }
 
+// 从前台进程运行为后台进程，预防控制台的退出导致 redis 的退出
 void daemonize(void) {
     int fd;
 
