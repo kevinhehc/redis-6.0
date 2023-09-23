@@ -1865,17 +1865,24 @@ int processInlineBuffer(client *c) {
         return C_ERR;
     }
 
-    /* Move querybuffer position to the next query in the buffer. */
+    /* Move querybuffer position to the next query in the buffer.
+     *
+     * 将查询缓冲区位置移动到缓冲区中的下一个查询。
+     * */
     c->qb_pos += querylen+linefeed_chars;
 
-    /* Setup argv array on client structure */
+    /* Setup argv array on client structure
+     * 在客户端结构上设置 argv 数组
+     * */
     if (argc) {
         if (c->argv) zfree(c->argv);
         c->argv = zmalloc(sizeof(robj*)*argc);
         c->argv_len_sum = 0;
     }
 
-    /* Create redis objects for all arguments. */
+    /* Create redis objects for all arguments.
+     * 为所有参数创建 redis 对象。
+     * */
     for (c->argc = 0, j = 0; j < argc; j++) {
         c->argv[c->argc] = createObject(OBJ_STRING,argv[j]);
         c->argc++;
@@ -1887,13 +1894,20 @@ int processInlineBuffer(client *c) {
 
 /* Helper function. Record protocol erro details in server log,
  * and set the client as CLIENT_CLOSE_AFTER_REPLY and
- * CLIENT_PROTOCOL_ERROR. */
+ * CLIENT_PROTOCOL_ERROR.
+ *
+ * 辅助功能。
+ * 在服务器日志中记录协议错误的详细信息，
+ * 并将客户端设置为CLIENT_CLOSE_AFTER_REPLY和CLIENT_PROTOCOL_ERROR。
+ * */
 #define PROTO_DUMP_LEN 128
 static void setProtocolError(const char *errstr, client *c) {
     if (server.verbosity <= LL_VERBOSE || c->flags & CLIENT_MASTER) {
         sds client = catClientInfoString(sdsempty(),c);
 
-        /* Sample some protocol to given an idea about what was inside. */
+        /* Sample some protocol to given an idea about what was inside.
+         * 对一些协议进行采样，以了解里面的内容。
+         * */
         char buf[256];
         if (sdslen(c->querybuf)-c->qb_pos < PROTO_DUMP_LEN) {
             snprintf(buf,sizeof(buf),"Query buffer during protocol error: '%s'", c->querybuf+c->qb_pos);
@@ -1901,14 +1915,18 @@ static void setProtocolError(const char *errstr, client *c) {
             snprintf(buf,sizeof(buf),"Query buffer during protocol error: '%.*s' (... more %zu bytes ...) '%.*s'", PROTO_DUMP_LEN/2, c->querybuf+c->qb_pos, sdslen(c->querybuf)-c->qb_pos-PROTO_DUMP_LEN, PROTO_DUMP_LEN/2, c->querybuf+sdslen(c->querybuf)-PROTO_DUMP_LEN/2);
         }
 
-        /* Remove non printable chars. */
+        /* Remove non printable chars.
+         * 删除不可打印的字符
+         * */
         char *p = buf;
         while (*p != '\0') {
             if (!isprint(*p)) *p = '.';
             p++;
         }
 
-        /* Log all the client and protocol info. */
+        /* Log all the client and protocol info.
+         * 记录所有客户端和协议信息。
+         * */
         int loglevel = (c->flags & CLIENT_MASTER) ? LL_WARNING :
                                                     LL_VERBOSE;
         serverLog(loglevel,
@@ -1928,17 +1946,31 @@ static void setProtocolError(const char *errstr, client *c) {
  *
  * This function is called if processInputBuffer() detects that the next
  * command is in RESP format, so the first byte in the command is found
- * to be '*'. Otherwise for inline commands processInlineBuffer() is called. */
+ * to be '*'. Otherwise for inline commands processInlineBuffer() is called.
+ *
+ * 处理客户端“c”的查询缓冲区，为命令执行设置客户端参数向量。
+ * 如果运行函数后客户端有一个格式良好的命令可供处理，则返回C_OK，
+ * 否则C_ERR是否仍有读取更多缓冲区才能获取完整命令。
+ * 当出现协议错误时，该函数还会返回C_ERR：在这种情况下，客户端结构设置为回复错误并关闭连接。
+ * 如果 processInputBuffer（） 检测到下一个命令采用 RESP 格式，则调用此函数，
+ * 因此发现命令中的第一个字节为“*”。否则，对于内联命令，将调用processInlineBuffer（）。
+ * */
 int processMultibulkBuffer(client *c) {
     char *newline = NULL;
     int ok;
     long long ll;
 
     if (c->multibulklen == 0) {
-        /* The client should have been reset */
+        /* The client should have been reset
+         *
+         * 客户端应已重置
+         * */
         serverAssertWithInfo(c,NULL,c->argc == 0);
 
-        /* Multi bulk length cannot be read without a \r\n */
+        /* Multi bulk length cannot be read without a \r\n
+         *
+         * 没有 \r\n 就无法读取多批量长度
+         * */
         newline = strchr(c->querybuf+c->qb_pos,'\r');
         if (newline == NULL) {
             if (sdslen(c->querybuf)-c->qb_pos > PROTO_INLINE_MAX_SIZE) {
@@ -1948,12 +1980,18 @@ int processMultibulkBuffer(client *c) {
             return C_ERR;
         }
 
-        /* Buffer should also contain \n */
+        /* Buffer should also contain \n
+         *
+         * 缓存也需要包含 \n
+         * */
         if (newline-(c->querybuf+c->qb_pos) > (ssize_t)(sdslen(c->querybuf)-c->qb_pos-2))
             return C_ERR;
 
         /* We know for sure there is a whole line since newline != NULL,
-         * so go ahead and find out the multi bulk length. */
+         * so go ahead and find out the multi bulk length.
+         *
+         * 我们肯定知道有一整行，因为换行符 ！= NULL，所以继续找出多块长度。
+         * */
         serverAssertWithInfo(c,NULL,c->querybuf[c->qb_pos] == '*');
         ok = string2ll(c->querybuf+1+c->qb_pos,newline-(c->querybuf+1+c->qb_pos),&ll);
         if (!ok || ll > 1024*1024) {
@@ -1972,7 +2010,9 @@ int processMultibulkBuffer(client *c) {
 
         c->multibulklen = ll;
 
-        /* Setup argv array on client structure */
+        /* Setup argv array on client structure
+         * 在客户端结构上设置 argv 数组
+         * */
         if (c->argv) zfree(c->argv);
         c->argv = zmalloc(sizeof(robj*)*c->multibulklen);
         c->argv_len_sum = 0;
@@ -1980,7 +2020,9 @@ int processMultibulkBuffer(client *c) {
 
     serverAssertWithInfo(c,NULL,c->multibulklen > 0);
     while(c->multibulklen) {
-        /* Read bulk length if unknown */
+        /* Read bulk length if unknown
+         * 读取批量长度（如果未知）
+         * */
         if (c->bulklen == -1) {
             newline = strchr(c->querybuf+c->qb_pos,'\r');
             if (newline == NULL) {
@@ -1993,7 +2035,10 @@ int processMultibulkBuffer(client *c) {
                 break;
             }
 
-            /* Buffer should also contain \n */
+            /* Buffer should also contain \n
+             *
+             * 缓存也需要包含 \n
+             * */
             if (newline-(c->querybuf+c->qb_pos) > (ssize_t)(sdslen(c->querybuf)-c->qb_pos-2))
                 break;
 
@@ -2024,15 +2069,25 @@ int processMultibulkBuffer(client *c) {
                  * boundary so that we can optimize object creation
                  * avoiding a large copy of data.
                  *
+                 * 如果我们要从网络中读取一个大型对象，请尝试使其可能从 c->querybuf 边界开始，
+                 * 以便我们可以优化对象创建，避免大量数据。
+                 *
                  * But only when the data we have not parsed is less than
                  * or equal to ll+2. If the data length is greater than
                  * ll+2, trimming querybuf is just a waste of time, because
-                 * at this time the querybuf contains not only our bulk. */
+                 * at this time the querybuf contains not only our bulk.
+                 *
+                 * 但只有当我们没有解析的数据小于或等于 ll+2 时。
+                 * 如果数据长度大于 ll+2，修剪 querybuf 只是浪费时间，因为此时 querybuf 不仅包含我们的批量。
+                 * */
                 if (sdslen(c->querybuf)-c->qb_pos <= (size_t)ll+2) {
                     sdsrange(c->querybuf,c->qb_pos,-1);
                     c->qb_pos = 0;
                     /* Hint the sds library about the amount of bytes this string is
-                     * going to contain. */
+                     * going to contain.
+                     *
+                     * 提示 sds 库有关此字符串将包含的字节数。
+                     * */
                     c->querybuf = sdsMakeRoomFor(c->querybuf,ll+2-sdslen(c->querybuf));
                 }
             }
@@ -2041,12 +2096,18 @@ int processMultibulkBuffer(client *c) {
 
         /* Read bulk argument */
         if (sdslen(c->querybuf)-c->qb_pos < (size_t)(c->bulklen+2)) {
-            /* Not enough data (+2 == trailing \r\n) */
+            /* Not enough data (+2 == trailing \r\n)
+             *
+             * 没有足够的数据
+             * */
             break;
         } else {
             /* Optimization: if the buffer contains JUST our bulk element
              * instead of creating a new object by *copying* the sds we
-             * just use the current sds string. */
+             * just use the current sds string.
+             *
+             * 优化：如果缓冲区只包含我们的批量元素，而不是通过*复制*sds来创建新对象，我们只使用当前的sds字符串。
+             * */
             if (c->qb_pos == 0 &&
                 c->bulklen >= PROTO_MBULK_BIG_ARG &&
                 sdslen(c->querybuf) == (size_t)(c->bulklen+2))
@@ -2055,7 +2116,10 @@ int processMultibulkBuffer(client *c) {
                 c->argv_len_sum += c->bulklen;
                 sdsIncrLen(c->querybuf,-2); /* remove CRLF */
                 /* Assume that if we saw a fat argument we'll see another one
-                 * likely... */
+                 * likely...
+                 *
+                 * 假设如果我们看到一个胖论点，我们会看到另一个可能......
+                 * */
                 c->querybuf = sdsnewlen(SDS_NOINIT,c->bulklen+2);
                 sdsclear(c->querybuf);
             } else {
@@ -2072,7 +2136,9 @@ int processMultibulkBuffer(client *c) {
     /* We're done when c->multibulk == 0 */
     if (c->multibulklen == 0) return C_OK;
 
-    /* Still not ready to process the command */
+    /* Still not ready to process the command
+     * 仍未准备好处理命令
+     * */
     return C_ERR;
 }
 
@@ -2080,18 +2146,34 @@ int processMultibulkBuffer(client *c) {
  *
  * 1. The client is reset unless there are reasons to avoid doing it.
  * 2. In the case of master clients, the replication offset is updated.
- * 3. Propagate commands we got from our master to replicas down the line. */
+ * 3. Propagate commands we got from our master to replicas down the line.
+ *
+ * 执行命令后执行必要的任务：
+ *
+ * 1.除非有理由避免重置客户端，否则客户端将重置。
+ * 2.对于主客户端，将更新复制偏移量。
+ * 3.将我们从主服务器获得的命令传播到副本。
+ *
+ * */
 void commandProcessed(client *c) {
     long long prev_offset = c->reploff;
     if (c->flags & CLIENT_MASTER && !(c->flags & CLIENT_MULTI)) {
-        /* Update the applied replication offset of our master. */
+        /* Update the applied replication offset of our master.
+         *
+         * 更新主节点的应用复制偏移量。
+         * */
         c->reploff = c->read_reploff - sdslen(c->querybuf) + c->qb_pos;
     }
 
     /* Don't reset the client structure for clients blocked in a
      * module blocking command, so that the reply callback will
      * still be able to access the client argv and argc field.
-     * The client will be reset in unblockClientFromModule(). */
+     * The client will be reset in unblockClientFromModule().
+     *
+     *
+     * 不要重置在模块阻止命令中阻止的客户端的客户端结构，以便回复回调仍然能够访问客户端 argv 和 argc 字段。
+     * 客户端将在 unblockClientFromModule（） 中重置。
+     * */
     if (!(c->flags & CLIENT_BLOCKED) ||
         c->btype != BLOCKED_MODULE)
     {
@@ -2103,7 +2185,11 @@ void commandProcessed(client *c) {
      * to understand how much of the replication stream was actually
      * applied to the master state: this quantity, and its corresponding
      * part of the replication stream, will be propagated to the
-     * sub-replicas and to the replication backlog. */
+     * sub-replicas and to the replication backlog.
+     *
+     * 如果客户端是主节点，我们需要计算处理缓冲区之前和之后应用的偏移量之间的差异，
+     * 以了解有多少复制流实际应用于主状态：此数量及其复制流的相应部分将传播到子副本和复制积压工作。
+     * */
     if (c->flags & CLIENT_MASTER) {
         long long applied = c->reploff - prev_offset;
         if (applied) {
@@ -2140,13 +2226,20 @@ int processCommandAndResetClient(client *c) {
     server.current_client = NULL;
     /* freeMemoryIfNeeded may flush slave output buffers. This may
      * result into a slave, that may be the active client, to be
-     * freed. */
+     * freed.
+     *
+     * freeMemoryIfNeed可能会刷新从输出缓冲区。这可能会导致从属服务器（可能是活动客户端）被释放。
+     * */
     return deadclient ? C_ERR : C_OK;
 }
 
 /* This function will execute any fully parsed commands pending on
  * the client. Returns C_ERR if the client is no longer valid after executing
- * the command, and C_OK for all other cases. */
+ * the command, and C_OK for all other cases.
+ *
+ * 此函数将执行客户端上挂起的任何完全解析的命令。
+ * 如果客户端在执行命令后不再有效，则返回C_ERR，对于所有其他情况，则返回C_OK。
+ * */
 int processPendingCommandsAndResetClient(client *c) {
     if (c->flags & CLIENT_PENDING_COMMAND) {
         c->flags &= ~CLIENT_PENDING_COMMAND;
@@ -2399,19 +2492,34 @@ void getClientsMaxBuffers(unsigned long *longest_output_list,
  * For IPv6 addresses we use [] around the IP part, like in "[::1]:1234".
  * For Unix sockets we use path:0, like in "/tmp/redis:0".
  *
+ * Redis “Peer ID” 是一个以冒号分隔的 ip：port 对。
+ * 对于 IPv4，它采用 x.y.z.k：port 的形式，例如：“127.0.0.1：1234”。
+ * 对于 IPv6 地址，我们在 IP 部分周围使用 []，如“[：：1]：1234”。
+ * 对于 Unix 套接字，我们使用 path：0，如 “/tmp/redis：0”。
+ *
  * A Peer ID always fits inside a buffer of NET_PEER_ID_LEN bytes, including
  * the null term.
  *
+ * 对等 ID 始终适合 NET_PEER_ID_LEN 字节的缓冲区，包括空术语。
+ *
  * On failure the function still populates 'peerid' with the "?:0" string
  * in case you want to relax error checking or need to display something
- * anyway (see anetPeerToString implementation for more info). */
+ * anyway (see anetPeerToString implementation for more info).
+ *
+ * 失败时，函数仍然使用“？：0”字符串填充“peerid”，
+ * 以防您想要放松错误检查或无论如何都需要显示某些内容（有关更多信息，请参阅 anetPeerToString 实现）。
+ * */
 void genClientPeerId(client *client, char *peerid,
                             size_t peerid_len) {
     if (client->flags & CLIENT_UNIX_SOCKET) {
-        /* Unix socket client. */
+        /* Unix socket client.
+         * socket 客户端
+         * */
         snprintf(peerid,peerid_len,"%s:0",server.unixsocket);
     } else {
-        /* TCP client. */
+        /* TCP client.
+         * tcp客户端
+         * */
         connFormatPeer(client->conn,peerid,peerid_len);
     }
 }
@@ -2419,7 +2527,12 @@ void genClientPeerId(client *client, char *peerid,
 /* This function returns the client peer id, by creating and caching it
  * if client->peerid is NULL, otherwise returning the cached value.
  * The Peer ID never changes during the life of the client, however it
- * is expensive to compute. */
+ * is expensive to compute.
+ *
+ *
+ * 此函数返回客户端对等 ID，如果客户端>peerid 为 NULL，则创建并缓存它，否则返回缓存的值。
+ * 对等 ID 在客户端的生命周期内永远不会更改，但是计算成本很高。
+ * */
 char *getClientPeerId(client *c) {
     char peerid[NET_PEER_ID_LEN];
 
@@ -2431,7 +2544,10 @@ char *getClientPeerId(client *c) {
 }
 
 /* Concatenate a string representing the state of a client in a human
- * readable format, into the sds string 's'. */
+ * readable format, into the sds string 's'.
+ *
+ * 将表示客户端状态的字符串以人类可读的格式连接到 sds 字符串“s”中。
+ * */
 sds catClientInfoString(sds s, client *client) {
     char flags[16], events[3], conninfo[CONN_INFO_LEN], *p;
 
@@ -2464,14 +2580,21 @@ sds catClientInfoString(sds s, client *client) {
     }
     *p = '\0';
 
-    /* Compute the total memory consumed by this client. */
+    /* Compute the total memory consumed by this client.
+     *
+     * 计算此客户端消耗的总内存。
+     * */
     size_t obufmem = getClientOutputBufferMemoryUsage(client);
     size_t total_mem = obufmem;
     total_mem += zmalloc_size(client); /* includes client->buf */
     total_mem += sdsZmallocSize(client->querybuf);
     /* For efficiency (less work keeping track of the argv memory), it doesn't include the used memory
      * i.e. unused sds space and internal fragmentation, just the string length. but this is enough to
-     * spot problematic clients. */
+     * spot problematic clients.
+     *
+     * 为了提高效率（跟踪argv内存的工作更少），它不包括已使用的内存，即未使用的sds空间和内部碎片，
+     * 仅包括字符串长度。但这足以发现有问题的客户。
+     * */
     total_mem += client->argv_len_sum;
     if (client->argv)
         total_mem += zmalloc_size(client->argv);
@@ -2523,16 +2646,27 @@ sds getAllClientsInfoString(int type) {
  * returned). If the function succeeeded C_OK is returned, and it's up
  * to the caller to send a reply if needed.
  *
+ * 此函数实现 CLIENT SETNAME，包括在字符集错误时回复用户错误（在这种情况下返回C_ERR）。
+ * 如果返回函数成功C_OK，则由调用方在需要时发送回复。
+ *
  * Setting an empty string as name has the effect of unsetting the
  * currently set name: the client will remain unnamed.
  *
- * This function is also used to implement the HELLO SETNAME option. */
+ * 将空字符串设置为 name 具有取消设置当前设置的名称的效果：客户端将保持未命名状态。
+ *
+ * This function is also used to implement the HELLO SETNAME option.
+ *
+ * 此函数还用于实现 HELLO SETNAME 选项。
+ * */
 int clientSetNameOrReply(client *c, robj *name) {
     int len = sdslen(name->ptr);
     char *p = name->ptr;
 
     /* Setting the client name to an empty string actually removes
-     * the current name. */
+     * the current name.
+     *
+     * 将客户端名称设置为空字符串实际上会删除当前名称。
+     * */
     if (len == 0) {
         if (c->name) decrRefCount(c->name);
         c->name = NULL;
@@ -2541,9 +2675,12 @@ int clientSetNameOrReply(client *c, robj *name) {
 
     /* Otherwise check if the charset is ok. We need to do this otherwise
      * CLIENT LIST format will break. You should always be able to
-     * split by space to get the different fields. */
+     * split by space to get the different fields.
+     *
+     *否则检查字符集是否正常。我们需要这样做，否则客户端列表格式将中断。您应该始终能够按空格拆分以获取不同的字段。
+     * */
     for (int j = 0; j < len; j++) {
-        if (p[j] < '!' || p[j] > '~') { /* ASCII is assumed. */
+        if (p[j] < '!' || p[j] > '~') { /* ASCII is assumed. 假定为 ASCII*/
             addReplyError(c,
                 "Client names cannot contain spaces, "
                 "newlines or special characters.");
@@ -3412,7 +3549,7 @@ int clientsArePaused(void) {
             /* Don't touch slaves and blocked clients.
              * The latter pending requests will be processed when unblocked.
              *
-             * 不要触摸奴隶和被阻止的客户端。后一个待处理的请求将在解锁时进行处理。
+             * 不要接触和被阻塞的客户端。后一个待处理的请求将在解锁时进行处理。
              * */
             if (c->flags & (CLIENT_SLAVE|CLIENT_BLOCKED)) continue;
             queueClientForReprocessing(c);
