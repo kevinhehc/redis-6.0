@@ -2747,14 +2747,14 @@ struct redisServer {
     // 慢查询日志的当前 id 值
     long long slowlog_entry_id;     /* SLOWLOG current entry ID 
                                      *
-                                     * SLOWLOG当前条目ID
+                                     * SLOWLOG当前节点ID
                                      * */
     // 慢查询时间限制
     long long slowlog_log_slower_than; /* SLOWLOG time limit (to get logged) 
                                         *
                                         * SLOWLOG时间限制（记录）
                                         * */
-    // 慢查询日志的最大条目数量
+    // 慢查询日志的最大节点数量
     unsigned long slowlog_max_len;     /* SLOWLOG max number of items logged 
                                         *
                                         * SLOWLOG记录的最大项目数
@@ -3943,13 +3943,13 @@ typedef struct {
 
 /* Structure for an entry while iterating over a list. 
  *
- * 在列表上迭代时的条目的结构。
+ * 在列表上迭代时的节点的结构。
  * */
 typedef struct {
     listTypeIterator *li;
     quicklistEntry entry; /* Entry in quicklist 
                            *
-                           * 快速列表中的条目
+                           * 快速列表中的节点
                            * */
 } listTypeEntry;
 
@@ -4405,7 +4405,7 @@ void ACLInit(void);
 #define ACL_DENIED_KEY 2
 #define ACL_DENIED_AUTH 3 /* Only used for ACL LOG entries. 
                            *
-                           * 仅用于ACL LOG条目。
+                           * 仅用于ACL LOG节点。
                            * */
 int ACLCheckUserCredentials(robj *username, robj *password);
 int ACLAuthenticateUser(client *c, robj *username, robj *password);

@@ -33,22 +33,19 @@
 
 /*-----------------------------------------------------------------------------
  * List API
+ * 列表API
  *----------------------------------------------------------------------------*/
 
 /* The function pushes an element to the specified list object 'subject',
  * at head or tail position as specified by 'where'.
  *
  * There is no need for the caller to increment the refcount of 'value' as
- * the function takes care of it if needed. */
-/*
- * 多态推入函数
+ * the function takes care of it if needed. 
  *
- * 根据 where 参数，将 value 推入列表 subject 的表头或表尾
- *
- * 调用者不必对 value 进行计数，这个函数会处理它
- *
- * T = O(N^2)
- */
+ * 函数将元素推送到指定的列表对象“subject”，位于“where”指定的头或尾
+ * 位置。调用方不需要增加“value”的refcount，因为如果需要，函数会处理
+ * 它。
+ * */
 void listTypePush(robj *subject, robj *value, int where) {
     if (subject->encoding == OBJ_ENCODING_QUICKLIST) {
         int pos = (where == LIST_HEAD) ? QUICKLIST_HEAD : QUICKLIST_TAIL;
@@ -100,12 +97,10 @@ unsigned long listTypeLength(const robj *subject) {
     }
 }
 
-/* Initialize an iterator at the specified index. */
-/*
- * 创建多态列表迭代器
+/* Initialize an iterator at the specified index. 
  *
- * T = O(1)
- */
+ * 在指定索引处初始化迭代器。
+ * */
 listTypeIterator *listTypeInitIterator(robj *subject, long index,
                                        unsigned char direction) {
     listTypeIterator *li = zmalloc(sizeof(listTypeIterator));
@@ -114,7 +109,11 @@ listTypeIterator *listTypeInitIterator(robj *subject, long index,
     li->direction = direction;
     li->iter = NULL;
     /* LIST_HEAD means start at TAIL and move *towards* head.
-     * LIST_TAIL means start at HEAD and move *towards tail. */
+     * LIST_TAIL means start at HEAD and move *towards tail. 
+     *
+     * LIST_HEAD表示从TAIL开始并将*移动到shead。LIST_TAIL表
+     * 示从HEAD开始，向尾部移动*。
+     * */
     int iter_direction =
         direction == LIST_HEAD ? AL_START_TAIL : AL_START_HEAD;
     if (li->encoding == OBJ_ENCODING_QUICKLIST) {
@@ -126,12 +125,10 @@ listTypeIterator *listTypeInitIterator(robj *subject, long index,
     return li;
 }
 
-/* Clean up the iterator. */
-/*
- * 释放迭代器
+/* Clean up the iterator. 
  *
- * T = O(1)
- */
+ * 清理迭代器。
+ * */
 void listTypeReleaseIterator(listTypeIterator *li) {
     zfree(li->iter);
     zfree(li);
@@ -139,16 +136,16 @@ void listTypeReleaseIterator(listTypeIterator *li) {
 
 /* Stores pointer to current the entry in the provided entry structure
  * and advances the position of the iterator. Returns 1 when the current
- * entry is in fact an entry, 0 otherwise. */
-/*
- * 将当前迭代到的节点保存到 entry ，并将迭代器的指针向前推移一步。
+ * entry is in fact an entry, 0 otherwise. 
  *
- * 获取节点成功返回 1 ，否则返回 0 。
- *
- * T = O(1)
- */
+ * 在提供的条目结构中存储指向当前条目的指针，并推进迭代器的位置。当当前条目实际上是
+ * 条目时，返回1，否则返回0。
+ * */
 int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
-    /* Protect from converting when iterating */
+    /* Protect from converting when iterating 
+     *
+     * 迭代时防止转换
+     * */
     serverAssert(li->subject->encoding == li->encoding);
 
     entry->li = li;
@@ -160,12 +157,10 @@ int listTypeNext(listTypeIterator *li, listTypeEntry *entry) {
     return 0;
 }
 
-/* Return entry or NULL at the current position of the iterator. */
-/*
- * 返回迭代器当前节点的值，如果迭代已经完成，返回 NULL
+/* Return entry or NULL at the current position of the iterator. 
  *
- * T = O(1)
- */
+ * 在迭代器的当前位置返回entry或NULL。
+ * */
 robj *listTypeGet(listTypeEntry *entry) {
     robj *value = NULL;
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
@@ -204,12 +199,10 @@ void listTypeInsert(listTypeEntry *entry, robj *value, int where) {
     }
 }
 
-/* Compare the given object with the entry at the current position. */
-/*
- * 对比 entry 的值和对象 o
+/* Compare the given object with the entry at the current position. 
  *
- * T = O(N)
- */
+ * 将给定对象与当前位置的条目进行比较。
+ * */
 int listTypeEqual(listTypeEntry *entry, robj *o) {
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
         serverAssertWithInfo(NULL,o,sdsEncodedObject(o));
@@ -219,12 +212,10 @@ int listTypeEqual(listTypeEntry *entry, robj *o) {
     }
 }
 
-/* Delete the element pointed to. */
-/*
- * 多态删除 entry 指向的元素
+/* Delete the element pointed to. 
  *
- * T = O(N^2)
- */
+ * 删除指向的元素。
+ * */
 void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry) {
     if (entry->li->encoding == OBJ_ENCODING_QUICKLIST) {
         quicklistDelEntry(iter->iter, &entry->entry);
@@ -233,14 +224,10 @@ void listTypeDelete(listTypeIterator *iter, listTypeEntry *entry) {
     }
 }
 
-/* Create a quicklist from a single ziplist */
-/*
- * 将列表转换为给定的编码类型
+/* Create a quicklist from a single ziplist 
  *
- * 目前只支持将 ziplist 转换为双端链表
- *
- * T = O(N)
- */
+ * 从单个快捷列表创建快速列表
+ * */
 void listTypeConvert(robj *subject, int enc) {
     serverAssertWithInfo(NULL,subject,subject->type==OBJ_LIST);
     serverAssertWithInfo(NULL,subject,subject->encoding==OBJ_ENCODING_ZIPLIST);
@@ -257,6 +244,7 @@ void listTypeConvert(robj *subject, int enc) {
 
 /*-----------------------------------------------------------------------------
  * List Commands
+ * 列表命令
  *----------------------------------------------------------------------------*/
 /*
  * [LR]PUSH 命令的实现
@@ -387,7 +375,10 @@ void linsertCommand(client *c) {
     if ((subject = lookupKeyWriteOrReply(c,c->argv[1],shared.czero)) == NULL ||
         checkType(c,subject,OBJ_LIST)) return;
 
-    /* Seek pivot from head to tail */
+    /* Seek pivot from head to tail 
+     *
+     * 从头到尾查找枢轴
+     * */
     iter = listTypeInitIterator(subject,0,LIST_TAIL);
     while (listTypeNext(iter,&entry)) {
         if (listTypeEqual(&entry,c->argv[3])) {
@@ -404,7 +395,10 @@ void linsertCommand(client *c) {
                             c->argv[1],c->db->id);
         server.dirty++;
     } else {
-        /* Notify client of a failed insert */
+        /* Notify client of a failed insert 
+         *
+         * 插入失败时通知客户端
+         * */
         addReplyLongLong(c,-1);
         return;
     }
@@ -551,13 +545,19 @@ void lrangeCommand(client *c) {
          || checkType(c,o,OBJ_LIST)) return;
     llen = listTypeLength(o);
 
-    /* convert negative indexes */
+    /* convert negative indexes 
+     *
+     * 转换负索引
+     * */
     if (start < 0) start = llen+start;
     if (end < 0) end = llen+end;
     if (start < 0) start = 0;
 
     /* Invariant: start >= 0, so this test will be true when end < 0.
-     * The range is empty when start > end or start >= length. */
+     * The range is empty when start > end or start >= length. 
+     *
+     * 不变量：start>=0，因此当end＜0时，此测试将为true。当开始>结束或开始>=长度时，范围为空。
+     * */
     if (start > end || start >= llen) {
         addReply(c,shared.emptyarray);
         return;
@@ -565,7 +565,10 @@ void lrangeCommand(client *c) {
     if (end >= llen) end = llen-1;
     rangelen = (end-start)+1;
 
-    /* Return the result in form of a multi-bulk reply */
+    /* Return the result in form of a multi-bulk reply 
+     *
+     * 以多批量回复的形式返回结果
+     * */
     addReplyArrayLen(c,rangelen);
     if (o->encoding == OBJ_ENCODING_QUICKLIST) {
         listTypeIterator *iter = listTypeInitIterator(o, start, LIST_TAIL);
@@ -600,15 +603,24 @@ void ltrimCommand(client *c) {
         checkType(c,o,OBJ_LIST)) return;
     llen = listTypeLength(o);
 
-    /* convert negative indexes */
+    /* convert negative indexes 
+     *
+     * 转换负索引
+     * */
     if (start < 0) start = llen+start;
     if (end < 0) end = llen+end;
     if (start < 0) start = 0;
 
     /* Invariant: start >= 0, so this test will be true when end < 0.
-     * The range is empty when start > end or start >= length. */
+     * The range is empty when start > end or start >= length. 
+     *
+     * 不变量：start>=0，因此当end＜0时，此测试将为true。当开始>结束或开始>=长度时，范围为空。
+     * */
     if (start > end || start >= llen) {
-        /* Out of range start or start > end result in empty list */
+        /* Out of range start or start > end result in empty list 
+         *
+         * 空列表中的开始或开始>结束结果超出范围
+         * */
         ltrim = llen;
         rtrim = 0;
     } else {
@@ -617,7 +629,10 @@ void ltrimCommand(client *c) {
         rtrim = llen-end-1;
     }
 
-    /* Remove list elements to perform the trim */
+    /* Remove list elements to perform the trim 
+     *
+     * 删除列表元素以执行修剪
+     * */
     if (o->encoding == OBJ_ENCODING_QUICKLIST) {
         quicklistDelRange(o->ptr,0,ltrim);
         quicklistDelRange(o->ptr,-rtrim,rtrim);
@@ -651,19 +666,38 @@ void ltrimCommand(client *c) {
  * default), all the elements in the list are scanned if needed.
  *
  * The returned elements indexes are always referring to what LINDEX
- * would return. So first element from head is 0, and so forth. */
+ * would return. So first element from head is 0, and so forth. 
+ *
+ * LPOS键元素[RANK RANK][COUNT num matches][MAXLEN len]
+ *
+ * “RANK”是匹配的位置，因此如果为1，则返回第一个匹配，如果为2，则返回第二个匹配，依此类推。默认情况下为1。
+ * 如果否定具有相同的含义，但搜索是从列表的末尾开始执行的。
+ *
+ * 如果给定了COUNT，则不返回单个元素，而是返回所有匹配元素的列表，最多返回“num个匹配”。
+ * COUNT可以与RANK组合，以便仅返回从第N个开始的元素。如果COUNT为零，则返回所有匹配的元素。
+ *
+ * MAXLEN告诉扫描最大len元素的命令。如果为零（默认值），则根据需要扫描列表中的所有元素。
+ *
+ * 返回的元素索引总是指LINDEX将返回的内容。所以从头开始的第一个元素是0，依此类推。
+ * */
 void lposCommand(client *c) {
     robj *o, *ele;
     ele = c->argv[2];
     int direction = LIST_TAIL;
-    long rank = 1, count = -1, maxlen = 0; /* Count -1: option not given. */
+    long rank = 1, count = -1, maxlen = 0; /* Count -1: option not given. 
+                                            *
+                                            * 计数-1：未给定选项。
+                                            * */
 
     if (sdslen(ele->ptr) > LIST_MAX_ITEM_SIZE) {
         addReplyError(c, "Element too large");
         return;
     }
 
-    /* Parse the optional arguments. */
+    /* Parse the optional arguments. 
+     *
+     * 分析可选参数。
+     * */
     for (int j = 3; j < c->argc; j++) {
         char *opt = c->argv[j]->ptr;
         int moreargs = (c->argc-1)-j;
@@ -699,14 +733,20 @@ void lposCommand(client *c) {
         }
     }
 
-    /* A negative rank means start from the tail. */
+    /* A negative rank means start from the tail. 
+     *
+     * 负排名意味着从尾部开始。
+     * */
     if (rank < 0) {
         rank = -rank;
         direction = LIST_HEAD;
     }
 
     /* We return NULL or an empty array if there is no such key (or
-     * if we find no matches, depending on the presence of the COUNT option. */
+     * if we find no matches, depending on the presence of the COUNT option. 
+     *
+     * 如果没有这样的键（或者没有找到匹配项，这取决于COUNT选项的存在），我们将返回NULL或空数组。
+     * */
     if ((o = lookupKeyRead(c->db,c->argv[1])) == NULL) {
         if (count != -1)
             addReply(c,shared.emptyarray);
@@ -716,11 +756,17 @@ void lposCommand(client *c) {
     }
     if (checkType(c,o,OBJ_LIST)) return;
 
-    /* If we got the COUNT option, prepare to emit an array. */
+    /* If we got the COUNT option, prepare to emit an array. 
+     *
+     * 如果我们得到了COUNT选项，准备发射一个数组。
+     * */
     void *arraylenptr = NULL;
     if (count != -1) arraylenptr = addReplyDeferredLen(c);
 
-    /* Seek the element. */
+    /* Seek the element. 
+     *
+     * 查找元素。
+     * */
     listTypeIterator *li;
     li = listTypeInitIterator(o,direction == LIST_HEAD ? -1 : 0,direction);
     listTypeEntry entry;
@@ -741,12 +787,18 @@ void lposCommand(client *c) {
             }
         }
         index++;
-        matchindex = -1; /* Remember if we exit the loop without a match. */
+        matchindex = -1; /* Remember if we exit the loop without a match. 
+                          *
+                          * 请记住，如果我们在没有匹配的情况下退出循环。
+                          * */
     }
     listTypeReleaseIterator(li);
 
     /* Reply to the client. Note that arraylenptr is not NULL only if
-     * the COUNT option was selected. */
+     * the COUNT option was selected. 
+     *
+     * 回复客户。请注意，只有在选择了COUNT选项时，arraylenptr才不是NULL。
+     * */
     if (arraylenptr != NULL) {
         setDeferredArrayLen(c,arraylenptr,arraylen);
     } else {
@@ -823,7 +875,22 @@ void lremCommand(client *c) {
  * The idea is to be able to get an element from a list in a reliable way
  * since the element is not just returned but pushed against another list
  * as well. This command was originally proposed by Ezra Zygmuntowicz.
- */
+ 
+ *
+ * 这是这个命令的语义
+ *  RPOPLPUSH srclist dstlist:
+ *    IF LLEN(srclist) > 0
+ *      element = RPOP srclist
+ *      LPUSH dstlist element
+ *      RETURN element
+ *    ELSE
+ *      RETURN nil
+ *    END
+ *  END
+ * 这个想法是能够以可靠的方式从列表中获取元素，因为
+ * 该元素不仅被返回，而且还被推送到另一个列表中。这个命令最初是由Ezra Zygm
+ * untowicz提出的。
+ * */
 
 /*
  * 将 value 添加到 dstkey 列表里
@@ -832,7 +899,10 @@ void lremCommand(client *c) {
  * T = O(N^2)
  */
 void rpoplpushHandlePush(client *c, robj *dstkey, robj *dstobj, robj *value) {
-    /* Create the list if the key does not exist */
+    /* Create the list if the key does not exist 
+     *
+     * 如果键不存在，则创建列表
+     * */
     if (!dstobj) {
         dstobj = createQuicklistObject();
         quicklistSetOptions(dstobj->ptr, server.list_max_ziplist_size,
@@ -842,7 +912,10 @@ void rpoplpushHandlePush(client *c, robj *dstkey, robj *dstobj, robj *value) {
     signalModifiedKey(c,c->db,dstkey);
     listTypePush(dstobj,value,LIST_HEAD);
     notifyKeyspaceEvent(NOTIFY_LIST,"lpush",dstkey,c->db->id);
-    /* Always send the pushed value to the client. */
+    /* Always send the pushed value to the client. 
+     *
+     * 始终将推送的值发送给客户端。
+     * */
     addReplyBulk(c,value);
 }
 
@@ -856,7 +929,10 @@ void rpoplpushCommand(client *c) {
 
     if (listTypeLength(sobj) == 0) {
         /* This may only happen after loading very old RDB files. Recent
-         * versions of Redis delete keys of empty lists. */
+         * versions of Redis delete keys of empty lists. 
+         *
+         * 这可能只有在加载非常旧的RDB文件之后才会发生。最新版本的Redis删除空列表的键。
+         * */
         addReplyNull(c);
     } else {
         robj *dobj = lookupKeyWrite(c->db,c->argv[2]);
@@ -866,14 +942,24 @@ void rpoplpushCommand(client *c) {
         value = listTypePop(sobj,LIST_TAIL);
         /* We saved touched key, and protect it, since rpoplpushHandlePush
          * may change the client command argument vector (it does not
-         * currently). */
+         * currently). 
+         *
+         * 我们保存了触摸过的键，并对其进行了保护，因为rpoplpushHandlePu
+         * sh可能会更改客户端命令参数向量（目前不会）。
+         * */
         incrRefCount(touchedkey);
         rpoplpushHandlePush(c,c->argv[2],dobj,value);
 
-        /* listTypePop returns an object with its refcount incremented */
+        /* listTypePop returns an object with its refcount incremented 
+         *
+         * listTypePop返回一个refcount递增的对象
+         * */
         decrRefCount(value);
 
-        /* Delete the source list when it is empty */
+        /* Delete the source list when it is empty 
+         *
+         * 删除空的源列表
+         * */
         notifyKeyspaceEvent(NOTIFY_LIST,"rpop",touchedkey,c->db->id);
         if (listTypeLength(sobj) == 0) {
             dbDelete(c->db,touchedkey);
@@ -891,6 +977,7 @@ void rpoplpushCommand(client *c) {
 
 /*-----------------------------------------------------------------------------
  * Blocking POP operations
+ * 阻止POP操作
  *----------------------------------------------------------------------------*/
 
 /* This is a helper function for handleClientsBlockedOnKeys(). Its work
@@ -911,13 +998,30 @@ void rpoplpushCommand(client *c) {
  * C_ERR is returned to signal the caller that the list POP operation
  * should be undone as the client was not served: This only happens for
  * BRPOPLPUSH that fails to push the value to the destination key as it is
- * of the wrong type. */
+ * of the wrong type. 
+ *
+ * 这是handleClientsBlockedOnKeys（）的辅助函数。它的工作
+ * 是为在指定的“db”上下文中的“key”上被阻止的特定客户端（接收器）提供服务，
+ * 执行以下操作：
+ *
+ * 1）为客户端提供“value”元素。
+ * 2） 如果dstkey不为NULL（我们提供的是BRPOPLPUSH），还将“value”元素推送到目标列表（命令的LPUSH一侧）。
+ * 3） 将生成的BRPOP、BLPOP和其他LPUSH（如果有的话）传播到AOF和复制通道中。
+ *
+ * 参数“where”是LIST_TAIL或LIST_HEAD，指示“value”元素是从头部（BLPOP）还是尾部（BRPOP）弹出的，以便我们可以正确传播命令。
+ *
+ * 如果我们能够为客户端提供服务，则函数返回C_OK，否则返回C_ERR以向调用方发出信号，表明由于客户端没有得到服务，
+ * 列表POP操作应该撤消：这种情况只发生在BRPOPLPUSH，因为它的类型错误，所以无法将值推送到目标键。
+ * */
 int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb *db, robj *value, int where)
 {
     robj *argv[3];
 
     if (dstkey == NULL) {
-        /* Propagate the [LR]POP operation. */
+        /* Propagate the [LR]POP operation. 
+         *
+         * 传播[LR]POP操作。
+         * */
         argv[0] = (where == LIST_HEAD) ? shared.lpop :
                                           shared.rpop;
         argv[1] = key;
@@ -930,7 +1034,10 @@ int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb 
         addReplyBulk(receiver,key);
         addReplyBulk(receiver,value);
 
-        /* Notify event. */
+        /* Notify event. 
+         *
+         * 通知事件。
+         * */
         char *event = (where == LIST_HEAD) ? "lpop" : "rpop";
         notifyKeyspaceEvent(NOTIFY_LIST,event,key,receiver->db->id);
     } else {
@@ -942,7 +1049,10 @@ int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb 
         {
             rpoplpushHandlePush(receiver,dstkey,dstobj,
                 value);
-            /* Propagate the RPOPLPUSH operation. */
+            /* Propagate the RPOPLPUSH operation. 
+             *
+             * 传播RPOPLPUSH操作。
+             * */
             argv[0] = shared.rpoplpush;
             argv[1] = key;
             argv[2] = dstkey;
@@ -951,18 +1061,27 @@ int serveClientBlockedOnList(client *receiver, robj *key, robj *dstkey, redisDb 
                 PROPAGATE_AOF|
                 PROPAGATE_REPL);
 
-            /* Notify event ("lpush" was notified by rpoplpushHandlePush). */
+            /* Notify event ("lpush" was notified by rpoplpushHandlePush). 
+             *
+             * Notify事件（rpoplpushHandlePush通知了“lpush”）。
+             * */
             notifyKeyspaceEvent(NOTIFY_LIST,"rpop",key,receiver->db->id);
         } else {
             /* BRPOPLPUSH failed because of wrong
-             * destination type. */
+             * destination type. 
+             *
+             * 由于目标类型错误，BRPOPLPUSH失败。
+             * */
             return C_ERR;
         }
     }
     return C_OK;
 }
 
-/* Blocking RPOP/LPOP */
+/* Blocking RPOP/LPOP 
+ *
+ * 阻止RPOP/LOP
+ * */
 /*
  * BLPOP/BRPOP 的底层实现
  */
@@ -986,7 +1105,10 @@ void blockingPopGenericCommand(client *c, int where) {
             } else {
                 // key 为非空列表？
                 if (listTypeLength(o) != 0) {
-                    /* Non empty list, this is like a normal [LR]POP. */
+                    /* Non empty list, this is like a normal [LR]POP. 
+                     *
+                     * 非空列表，这就像一个正常的[LR]POP。
+                     * */
                     char *event = (where == LIST_HEAD) ? "lpop" : "rpop";
                     // 非空列表，执行普通的 [LR]POP
                     robj *value = listTypePop(o,where);
@@ -1007,7 +1129,10 @@ void blockingPopGenericCommand(client *c, int where) {
                     signalModifiedKey(c,c->db,c->argv[j]);
                     server.dirty++;
 
-                    /* Replicate it as an [LR]POP instead of B[LR]POP. */
+                    /* Replicate it as an [LR]POP instead of B[LR]POP. 
+                     *
+                     * 将其复制为[LR]POP，而不是B[LR]POP。
+                     * */
                     rewriteClientCommandVector(c,2,
                         (where == LIST_HEAD) ? shared.lpop : shared.rpop,
                         c->argv[j]);
@@ -1018,7 +1143,10 @@ void blockingPopGenericCommand(client *c, int where) {
     }
 
     /* If we are inside a MULTI/EXEC and the list is empty the only thing
-     * we can do is treating it as a timeout (even with timeout 0). */
+     * we can do is treating it as a timeout (even with timeout 0). 
+     *
+     * 如果我们在MULTI/EXEC中，并且列表为空，那么我们唯一能做的就是将其视为超时（即使超时为0）。
+     * */
     // 如果命令正被事务包含，那么只能返回等待超时
     // （阻塞不能用在事务里，因为这回造成事务一直等待下去）
     if (c->flags & CLIENT_MULTI) {
@@ -1026,7 +1154,10 @@ void blockingPopGenericCommand(client *c, int where) {
         return;
     }
 
-    /* If the keys do not exist we must block */
+    /* If the keys do not exist we must block 
+     *
+     * 如果键不存在，我们必须阻止
+     * */
     // 所有给定 key 都为空，进行 block
     blockForKeys(c,BLOCKED_LIST,c->argv + 1,c->argc - 2,timeout,NULL,NULL);
 }
@@ -1053,10 +1184,16 @@ void brpoplpushCommand(client *c) {
     if (key == NULL) {
         if (c->flags & CLIENT_MULTI) {
             /* Blocking against an empty list in a multi state
-             * returns immediately. */
+             * returns immediately. 
+             *
+             * 在多状态下，对空列表的阻塞会立即返回。
+             * */
             addReplyNull(c);
         } else {
-            /* The list is empty and the client blocks. */
+            /* The list is empty and the client blocks. 
+             *
+             * 该列表为空，客户端将被阻止。
+             * */
             // 直接等待元素 push 到 key
             blockForKeys(c,BLOCKED_LIST,c->argv + 1,1,timeout,c->argv[2],NULL);
         }
@@ -1065,7 +1202,10 @@ void brpoplpushCommand(client *c) {
             addReply(c, shared.wrongtypeerr);
         } else {
             /* The list exists and has elements, so
-             * the regular rpoplpushCommand is executed. */
+             * the regular rpoplpushCommand is executed. 
+             *
+             * 该列表存在并且具有元素，因此执行常规rpoplpushCommand。
+             * */
             serverAssertWithInfo(c,key,listTypeLength(key) > 0);
             rpoplpushCommand(c);
         }

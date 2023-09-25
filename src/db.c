@@ -447,13 +447,13 @@ robj *dbRandomKey(redisDb *db) {
 
 /* Delete a key, value, and associated expiration entry if any, from the DB 
  *
- * 从数据库中删除键、值和相关的过期条目（如果有的话）
+ * 从数据库中删除键、值和相关的过期节点（如果有的话）
  * */
 int dbSyncDelete(redisDb *db, robj *key) {
     /* Deleting an entry from the expires dict will not free the sds of
      * the key, because it is shared with the main dictionary. 
      *
-     * 从过期dict中删除条目不会释放键的sds，因为它与主字典共享。
+     * 从过期dict中删除节点不会释放键的sds，因为它与主字典共享。
      * */
     
     
@@ -1782,7 +1782,7 @@ int removeExpire(redisDb *db, robj *key) {
     /* An expire may only be removed if there is a corresponding entry in the
      * main dict. Otherwise, the key will never be freed. 
      *
-     * 只有当主dict中有相应的条目时，才能删除expire。否则，键将永远不会被释
+     * 只有当主dict中有相应的节点时，才能删除expire。否则，键将永远不会被释
      * 放。
      * */
     serverAssertWithInfo(NULL,key,dictFind(db->dict,key->ptr) != NULL);
@@ -1834,7 +1834,7 @@ long long getExpire(redisDb *db, robj *key) {
     /* The entry was found in the expire dict, this means it should also
      * be present in the main dict (safety check). 
      *
-     * 该条目是在过期dict中找到的，这意味着它也应该存在于主dict（安全检查）中。
+     * 该节点是在过期dict中找到的，这意味着它也应该存在于主dict（安全检查）中。
      * */
     serverAssertWithInfo(NULL,key,dictFind(db->dict,key->ptr) != NULL);
     // 取出字典值中保存的整数值
@@ -2142,7 +2142,7 @@ int getKeysUsingCommandTable(struct redisCommand *cmd,robj **argv, int argc, get
  * 返回所有参数，这些参数是通过argc/argv传递的命令中的键。该命令返回数组中
  * 所有键参数的位置，因此实际返回值是一个堆分配的整数数组。数组的长度通过引用返回到
  * *numkeys中。'根据argv[0]中的命令名称，cmd必须指向rediCo
- * mmand表中的相应条目。如果不需要特定于命令的辅助函数，则此函数使用命令表，否
+ * mmand表中的相应节点。如果不需要特定于命令的辅助函数，则此函数使用命令表，否
  * 则它将调用特定于命令函数。
  * */
 int getKeysFromCommand(struct redisCommand *cmd, robj **argv, int argc, getKeysResult *result) {

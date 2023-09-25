@@ -1773,7 +1773,7 @@ int rewriteStreamObject(rio *r, robj *key, robj *o) {
              * have pending entries. Empty consumers have no semantical
              * value so they are discarded. 
              *
-             * 为每个碰巧有挂起条目的使用者生成XCLAIM。空的消费者没有语义价值，所以它们被
+             * 为每个碰巧有挂起节点的使用者生成XCLAIM。空的消费者没有语义价值，所以它们被
              * 丢弃了。
              * */
             raxIterator ri_cons;
@@ -1784,7 +1784,7 @@ int rewriteStreamObject(rio *r, robj *key, robj *o) {
                 /* For the current consumer, iterate all the PEL entries
                  * to emit the XCLAIM protocol. 
                  *
-                 * 对于当前使用者，迭代所有PEL条目以发出XCLAIM协议。
+                 * 对于当前使用者，迭代所有PEL节点以发出XCLAIM协议。
                  * */
                 raxIterator ri_pel;
                 raxStart(&ri_pel,consumer->pel);
@@ -1878,7 +1878,7 @@ int rewriteAppendOnlyFileRio(rio *aof) {
 
         /* Iterate this DB writing every entry 
          *
-         * 迭代此DB写入每个条目
+         * 迭代此DB写入每个节点
          * */
         // 遍历数据库的所有 key-value 对
         while((de = dictNext(di)) != NULL) {

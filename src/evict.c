@@ -53,11 +53,11 @@
  *
  * 为了提高LRU近似的质量，我们采用了一组键，这些键很适合在freeMemoryIfNeedd（）调用中驱逐。
  * 
- * 驱逐池中的条目按空闲时间排序，将更大的空闲时间放在右边（升序）。
+ * 驱逐池中的节点按空闲时间排序，将更大的空闲时间放在右边（升序）。
  * 
  * 当使用LFU策略时，使用反向频率指示而不是空闲时间，因此我们仍然以更大的值驱逐（更大的反向频率意味着驱逐访问频率最低的键）。
  * 
- * 空条目的键指针设置为NULL。
+ * 空节点的键指针设置为NULL。
  * */
 #define EVPOOL_SIZE 16
 #define EVPOOL_CACHED_SDS_SIZE 255
@@ -181,7 +181,7 @@ unsigned long long estimateObjectIdleTime(robj *o) {
  * 如果采样的N个键比池中的一个当前键好，则将其添加
  * 到好键池中以过期（具有旧访问时间的键）。在填充池之后，我们在池中拥有的最佳密
  * 钥将过期。但是，请注意，删除键时，我们不会从池中删除键，因此池中可能包含不再
- * 存在的键。当我们试图收回一个键，而池中的所有条目都不存在时，我们会再次填充它
+ * 存在的键。当我们试图收回一个键，而池中的所有节点都不存在时，我们会再次填充它
  * 。这一次，如果整个数据库中至少有一个键可以收回，我们将确保池中至少有个键可以
  * 被收回。
  * */
@@ -213,8 +213,8 @@ void evictionPoolAlloc(void) {
  * idle time are on the left, and keys with the higher idle time on the
  * right. 
  *
- * 这是freeMemoryIfNeedd（）的一个助手函数，用于在每次要使键过期时用几个条目填充驱逐池。
- * 将添加空闲时间小于某个当前关键帧的关键帧。如果存在空闲条目，则始终添加键。
+ * 这是freeMemoryIfNeedd（）的一个助手函数，用于在每次要使键过期时用几个节点填充驱逐池。
+ * 将添加空闲时间小于某个当前关键帧的关键帧。如果存在空闲节点，则始终添加键。
  * 
  * 我们按升序在适当的位置插入键，所以空闲时间较小的键在左边，空闲时间较高的键在右边。
  * */
@@ -348,7 +348,7 @@ void evictionPoolPopulate(int dbid, dict *sampledict, dict *keydict, struct evic
          * (according to the profiler, not my fantasy. Remember:
          * premature optimization bla bla bla. 
          *
-         * 尝试重用池条目中分配的缓存SDS字符串，因为分配和释放此对象的成本很高（根据探查
+         * 尝试重用池节点中分配的缓存SDS字符串，因为分配和释放此对象的成本很高（根据探查
          * 器的说法，不是我的幻想。记住：过早优化blablabla。
          * */
         int klen = sdslen(key);
@@ -704,7 +704,7 @@ int freeMemoryIfNeeded(void) {
 
                     /* Remove the entry from the pool. 
                      *
-                     * 从池中删除条目。
+                     * 从池中删除节点。
                      * */
                     if (pool[k].key != pool[k].cached)
                         sdsfree(pool[k].key);

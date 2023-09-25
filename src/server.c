@@ -89,7 +89,7 @@ struct redisServer server; /* Server global state
  * 我们的命令表
  *
  * Every entry is composed of the following fields:
- * 每个条目都由以下字段组成
+ * 每个节点都由以下字段组成
  *
  * name:        A string representing the command name.
  *              命令的名称

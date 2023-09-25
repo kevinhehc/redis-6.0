@@ -168,8 +168,8 @@ robj *createStringObject(const char *ptr, size_t len) {
  * 从长-长值创建字符串对象。如果可能，返回一个共享整数对象，或者至少返回一个整数编
  * 码对象。
  *
- * 如果valueobj不为零，函数将避免返回共享整数，因为该对象将用作Redis密钥空间中的值
- * （例如，当使用INCR命令时），因此我们希望LFU/LRU值特定于每个密钥。
+ * 如果valueobj不为零，函数将避免返回共享整数，因为该对象将用作Redis键空间中的值
+ * （例如，当使用INCR命令时），因此我们希望LFU/LRU值特定于每个键。
  * */
 // valueobj 指定是否使用共享的对象
 robj *createStringObjectFromLongLongWithOptions(long long value, int valueobj) {
@@ -225,9 +225,8 @@ robj *createStringObjectFromLongLong(long long value) {
  * as a value in the key space, and Redis is configured to evict based on
  * LFU/LRU. 
  *
- * createStringObjectFromLongLongWithOption
- * s（）的Wrapper在需要LFU/LRU信息时，即当对象用作密钥空间中的值时，
- * 避免共享对象，Redis配置为基于LFU/LRU逐出。
+ * createStringObjectFromLongLongWithOptions（）的Wrapper在需要LFU/LRU信息时，
+ * 即当对象用作键空间中的值时，避免共享对象，Redis配置为基于LFU/LRU逐出。
  * */
 robj *createStringObjectFromLongLongForValue(long long value) {
     return createStringObjectFromLongLongWithOptions(value,1);
@@ -242,7 +241,9 @@ robj *createStringObjectFromLongLongForValue(long long value) {
  *
  * 从长双精度创建字符串对象。如果人性化为非零，则不使用指数格式，并在末尾修剪尾随的
  * 零，但这会导致精度损失。否则将使用exp格式，并且不会修改snprintf（）的
- * 输出。INCRBYFLOAT和HINCRBYFLOAT使用“人性化”选项。
+ * 输出。
+ *
+ * INCRBYFLOAT和HINCRBYFLOAT使用“人性化”选项。
  * */
 /*
  * 根据给定 long double 值 value ，创建 String 对象
@@ -262,9 +263,11 @@ robj *createStringObjectFromLongDouble(long double value, int humanfriendly) {
  *
  * The resulting object always has refcount set to 1. 
  *
- * 复制字符串对象，并确保返回的对象与原始对象具有相同的编码。此函数还保证复制一个小
- * 整数对象（或包含小整数表示的字符串对象）将始终产生一个未共享的新对象（refco
- * unt==1）。生成的对象总是将refcount设置为1。
+ * 复制字符串对象，并确保返回的对象与原始对象具有相同的编码。
+ *
+ * 此函数还保证复制一个小整数对象（或包含小整数表示的字符串对象）将始终产生一个未共享的新对象（refcount==1）。
+ *
+ * 生成的对象总是将refcount设置为1。
  * */
 /*
  * 复制一个 String 对象的副本
@@ -518,9 +521,8 @@ void decrRefCount(robj *o) {
  * as free method in data structures that expect a 'void free_object(void*)'
  * prototype for the free method. 
  *
- * decoRefCount（）的这个变体将其参数设置为void，并且在期望“voi
- * d free_object（void*）”原型作为自由方法的数据结构中，它非常有
- * 用。
+ * decoRefCount（）的这个变体将其参数设置为void，并且在期望“void free_object（void*）”
+ * 原型作为自由方法的数据结构中，它非常有用。
  * */
 void decrRefCountVoid(void *o) {
     decrRefCount(o);
@@ -540,11 +542,15 @@ void decrRefCountVoid(void *o) {
  
  *
  * 此函数在不释放对象的情况下将引用计数设置为零。将新对象传递给递增接收对象的ref
- * 计数的函数是有用的。示例：functionThatWillIncrementRe
- * fCount（resetRefCount（CreateObject（…）））；否
- * 则，您需要使用不那么优雅的模式：*obj=createObject（…）；函数T
- * hatWillIncrementRefCount（obj）；deccRefCou
- * nt（obj）；
+ * 计数的函数是有用的。示例：
+ *
+ *    functionThatWillIncrementRefCount（resetRefCount（CreateObject（…）））；
+ *
+ *   否则，您需要使用不那么优雅的模式：
+ *
+ *    *obj = createObject(...);
+ *    functionThatWillIncrementRefCount(obj);
+ *    decrRefCount(obj);
  * */
 /*
  * 将对象的引用数设置为 0 ，但不释放该对象
@@ -639,7 +645,7 @@ robj *tryObjectEncoding(robj *o) {
      * they are not handled. We handle them only as values in the keyspace. 
      *
      * 对共享对象进行编码是不安全的：共享对象可以在Redis的“对象空间”中的任何地方
-     * 共享，并且可能会在没有处理它们的地方结束。我们只将它们作为密钥空间中的值来处理。
+     * 共享，并且可能会在没有处理它们的地方结束。我们只将它们作为键空间中的值来处理。
      * */
     // 不对共享对象进行编码
      if (o->refcount > 1) return o;
@@ -817,8 +823,7 @@ int compareStringObjectsWithFlags(robj *a, robj *b, int flags) {
 
 /* Wrapper for compareStringObjectsWithFlags() using binary comparison. 
  *
- * 使用二进制比较的compareStringObjectsWithFlags（）的
- * 包装器。
+ * 使用二进制比较的compareStringObjectsWithFlags（）的包装器。
  * */
 int compareStringObjects(robj *a, robj *b) {
     return compareStringObjectsWithFlags(a,b,REDIS_COMPARE_BINARY);
@@ -826,8 +831,7 @@ int compareStringObjects(robj *a, robj *b) {
 
 /* Wrapper for compareStringObjectsWithFlags() using collation. 
  *
- * 使用排序规则的compareStringObjectsWithFlags（）的包
- * 装器。
+ * 使用排序规则的compareStringObjectsWithFlags（）的包装器。
  * */
 int collateStringObjects(robj *a, robj *b) {
     return compareStringObjectsWithFlags(a,b,REDIS_COMPARE_COLL);
@@ -839,8 +843,7 @@ int collateStringObjects(robj *a, robj *b) {
  * because it can perform some more optimization. 
  *
  * 如果从字符串比较的角度来看两个对象相同，则相等的字符串对象返回1，否则返回0。请
- * 注意，此函数比检查（compareStringObject（a，b）==0）更快
- * ，因为它可以执行更多的优化。
+ * 注意，此函数比检查（compareStringObject（a，b）==0）更快，因为它可以执行更多的优化。
  * */
 int equalStringObjects(robj *a, robj *b) {
     if (a->encoding == OBJ_ENCODING_INT &&
@@ -1011,9 +1014,7 @@ char *strEncoding(int encoding) {
 }
 
 /* =========================== Memory introspection ========================= 
- *
- * ===========================内存内省=========
- * ================
+ *                             内存内省
  * */
 
 
@@ -1033,10 +1034,10 @@ char *strEncoding(int encoding) {
  * to compress prefixes. 
  *
  * 这是一个辅助函数，目的是估计用于存储流ID的基数树的内存大小。注意：猜测基数树的
- * 大小并非易事，因此我们考虑每个键（ID）16字节的数据开销，然后添加裸节点的数量
- * ，再加上数据和子指针引起的一些开销，对其进行近似。这个秘密配方是通过检查实际工作
+ * 大小并非易事，因此我们考虑每个键（ID）16字节的数据开销，然后添加裸节点的数量，
+ * 再加上数据和子指针引起的一些开销，对其进行近似。这个秘密配方是通过检查实际工作
  * 负载创建的平均基数树，然后调整常数以获得或多或少与实际内存使用情况匹配的数字来获
- * 得的。实际上，节点和密钥的数量可能不同，这取决于插入速度，从而取决于基数树压缩前
+ * 得的。实际上，节点和键的数量可能不同，这取决于插入速度，从而取决于基数树压缩前
  * 缀的能力。
  * */
 size_t streamRadixTreeMemoryUsage(rax *rax) {
@@ -1045,7 +1046,7 @@ size_t streamRadixTreeMemoryUsage(rax *rax) {
     size += rax->numnodes * sizeof(raxNode);
     /* Add a fixed overhead due to the aux data pointer, children, ... 
      *
-     * 由于辅助数据指针、子项等原因，添加了固定的开销。。。
+     * 由于辅助数据指针、子进程原因，添加了固定的开销。。。
      * */
     size += rax->numnodes * sizeof(long)*30;
     return size;
@@ -1057,8 +1058,7 @@ size_t streamRadixTreeMemoryUsage(rax *rax) {
  * are checked and averaged to estimate the total size. 
  *
  * 返回RAM中键的值所消耗的字节大小。请注意，返回的值只是一个近似值，尤其是在聚合
- * 数据类型的情况下，只有“sample_size”元素被检查并取平均值来估计总大小
- * 。
+ * 数据类型的情况下，只有“sample_size”元素被检查并取平均值来估计总大小。
  * */
 #define OBJ_COMPUTE_SIZE_DEF_SAMPLES 5 /* Default sample size. 
                                         *
@@ -1200,7 +1200,7 @@ size_t objectComputeSize(robj *o, size_t sample_size) {
          * PELs. 
          *
          * 使用者组也有一个非平凡的内存开销。如果有许多使用者和许多组，让我们至少计算一下组
-         * 和使用者PEL中挂起的条目的开销。
+         * 和使用者PEL中挂起的节点的开销。
          * */
         if (s->cgroups) {
             raxStart(&ri,s->cgroups);
@@ -1261,9 +1261,8 @@ void freeMemoryOverheadData(struct redisMemOverhead *mh) {
  * information used for the MEMORY OVERHEAD and INFO command. The returned
  * structure pointer should be freed calling freeMemoryOverheadData(). 
  *
- * 返回一个结构体redisMemOverhead，该结构体填充了用于memory 
- * overhead和INFO命令的内存开销信息。应通过调用freeMemoryOv
- * erheadData（）释放返回的结构指针。
+ * 返回一个结构体redisMemOverhead，该结构体填充了用于memoryoverhead和INFO命令的内存开销信息。
+ * 应通过调用freeMemoryOverheadData（）释放返回的结构指针。
  * */
 struct redisMemOverhead *getMemoryOverheadData(void) {
     int j;
@@ -1304,8 +1303,7 @@ struct redisMemOverhead *getMemoryOverheadData(void) {
      * here online. We use our values computed incrementally by
      * clientsCronTrackClientsMemUsage(). 
      *
-     * 如果在这里在线计算，客户端使用的内存将为O（N）。我们使用由clientsCro
-     * nTrackClientsMemUsage（）递增计算的值。
+     * 如果在这里在线计算，客户端使用的内存将为O（N）。我们使用由clientsCronTrackClientsMemUsage（）递增计算的值。
      * */
     mh->clients_slaves = server.stat_clients_type_memory[CLIENT_TYPE_SLAVE];
     mh->clients_normal = server.stat_clients_type_memory[CLIENT_TYPE_MASTER]+
@@ -1566,8 +1564,9 @@ sds getMemoryDoctorReport(void) {
  *
  * 根据server.maxmemory_policy设置对象LRU/LFU。只有当
  * 策略为maxmemory_FLAG_LFU时，lfufreq参数才相关。只有当策
- * 略为MAXMEMORY_FLAG_lru时，lru_idle和lru_lock参
- * 数才相关。它们中的一个或两个可能都＜0，在这种情况下，不设置任何内容。
+ * 略为MAXMEMORY_FLAG_lru时，lru_idle和lru_lock参数才相关。
+ *
+ * 它们中的一个或两个可能都＜0，在这种情况下，不设置任何内容。
  * */
 int objectSetLRUOrLFU(robj *val, long long lfu_freq, long long lru_idle,
                        long long lru_clock, int lru_multiplier) {
@@ -1611,15 +1610,13 @@ int objectSetLRUOrLFU(robj *val, long long lfu_freq, long long lru_idle,
 }
 
 /* ======================= The OBJECT and MEMORY commands =================== 
- *
- * =========================OBJECT和MEMORY命令
- * ===================
+ *                         OBJECT和MEMORY命令
  * */
 
 /* This is a helper function for the OBJECT command. We need to lookup keys
  * without any modification of LRU or other parameters. 
  *
- * 这是OBJECT命令的辅助函数。我们需要在不修改LRU或其他参数的情况下查找密钥
+ * 这是OBJECT命令的辅助函数。我们需要在不修改LRU或其他参数的情况下查找键
  * 。
  * */
 robj *objectCommandLookup(client *c, robj *key) {
@@ -1675,8 +1672,8 @@ NULL
          * because we update the access time only
          * when the key is read or overwritten. 
          *
-         * 如果密钥长时间未被访问，则应调用LFUDecrAndReturn，因为我们只有在
-         * 读取或覆盖密钥时才会更新访问时间。
+         * 如果键长时间未被访问，则应调用LFUDecrAndReturn，因为我们只有在
+         * 读取或覆盖键时才会更新访问时间。
          * */
         addReplyLongLong(c,LFUDecrAndReturn(o));
     } else {
@@ -1689,8 +1686,9 @@ NULL
  *
  * Usage: MEMORY usage <key> 
  *
- * 内存命令最终将成为Redis内存自省功能的完整接口。用法：MEMORY用法<ke
- * y>
+ * 内存命令最终将成为Redis内存自省功能的完整接口。
+ * 
+ * MEMORY usage <key> 
  * */
 void memoryCommand(client *c) {
     if (!strcasecmp(c->argv[1]->ptr,"help") && c->argc == 2) {

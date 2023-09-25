@@ -344,7 +344,7 @@ static int anetTcpGenericConnect(char *err, const char *addr, int port,
         /* Try to create the socket and to connect it.
          * If we fail in the socket() call, or on connect(), we retry with
          * the next entry in servinfo. */
-        // 尝试创建套接字并连接它。如果我们在 socket（） 调用或 connect（） 中失败，我们将重试 servinfo 中的下一个条目。
+        // 尝试创建套接字并连接它。如果我们在 socket（） 调用或 connect（） 中失败，我们将重试 servinfo 中的下一个节点。
         if ((s = socket(p->ai_family,p->ai_socktype,p->ai_protocol)) == -1)
             continue;
         if (anetSetReuseAddr(err,s) == ANET_ERR) goto error;

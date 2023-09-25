@@ -961,14 +961,14 @@ ssize_t rdbSaveStreamPEL(rio *rdb, rax *pel, int nacks) {
 
     /* Number of entries in the PEL. 
      *
-     * PEL中的条目数。
+     * PEL中的节点数。
      * */
     if ((n = rdbSaveLen(rdb,raxSize(pel))) == -1) return -1;
     nwritten += n;
 
     /* Save each entry. 
      *
-     * 保存每个条目。
+     * 保存每个节点。
      * */
     raxIterator ri;
     raxStart(&ri,pel);
@@ -1253,7 +1253,7 @@ ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
          * when loading back, we'll use the first entry of each listpack
          * to insert it back into the radix tree. 
          *
-         * 按原样序列化基数树中的所有列表包，在加载时，我们将使用每个列表包的第一个条目将其插入基数树中。
+         * 按原样序列化基数树中的所有列表包，在加载时，我们将使用每个列表包的第一个节点将其插入基数树中。
          * */
         raxIterator ri;
         raxStart(&ri,rax);
@@ -1284,7 +1284,7 @@ ssize_t rdbSaveObject(rio *rdb, robj *o, robj *key) {
         nwritten += n;
         /* Save the last entry ID. 
          *
-         * 保存最后一个条目ID。
+         * 保存最后一个节点ID。
          * */
         if ((n = rdbSaveLen(rdb,s->last_id.ms)) == -1) return -1;
         nwritten += n;
@@ -1684,7 +1684,7 @@ int rdbSaveRio(rio *rdb, int *error, int rdbflags, rdbSaveInfo *rsi) {
 
         /* Iterate this DB writing every entry 
          *
-         * 迭代此DB写入每个条目
+         * 迭代此DB写入每个节点
          * */
         // 将数据库中的所有节点保存到 RDB 文件
         while((de = dictNext(di)) != NULL) {
@@ -2084,7 +2084,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb, sds key) {
 
         /* Use a regular set when there are too many entries. 
          *
-         * 当条目太多时，请使用正则集。
+         * 当节点太多时，请使用正则集。
          * */
         // 根据元素的数量决定集合的编码
         size_t max_entries = server.set_max_intset_entries;
@@ -2220,7 +2220,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb, sds key) {
 
         /* Too many entries? Use a hash table. 
          *
-         * 条目太多？使用哈希表。
+         * 节点太多？使用哈希表。
          * */
         if (len > server.hash_max_ziplist_entries)
             hashTypeConvert(o, OBJ_ENCODING_HT);
@@ -2439,7 +2439,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb, sds key) {
              * node: the entries inside the listpack itself are delta-encoded
              * relatively to this ID. 
              *
-             * 获取主ID，我们将使用它作为基数树节点的键：列表包本身中的条目相对于该ID进行delta编码。
+             * 获取主ID，我们将使用它作为基数树节点的键：列表包本身中的节点相对于该ID进行delta编码。
              * */
             sds nodekey = rdbGenericLoadStringObject(rdb,RDB_LOAD_SDS,NULL);
             if (nodekey == NULL) {
@@ -2494,7 +2494,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb, sds key) {
 
         /* Load the last entry ID. 
          *
-         * 加载最后一个条目ID。
+         * 加载最后一个节点ID。
          * */
         s->last_id.ms = rdbLoadLen(rdb,NULL);
         s->last_id.seq = rdbLoadLen(rdb,NULL);
@@ -2615,7 +2615,7 @@ robj *rdbLoadObject(int rdbtype, rio *rdb, sds key) {
                 /* Load the PEL about entries owned by this specific
                  * consumer. 
                  *
-                 * 加载关于此特定使用者拥有的条目的PEL。
+                 * 加载关于此特定使用者拥有的节点的PEL。
                  * */
                 pel_size = rdbLoadLen(rdb,NULL);
                 if (pel_size == RDB_LENERR) {

@@ -69,7 +69,7 @@ size_t lazyfreeGetFreeEffort(robj *obj) {
          * PEL. We use size of the first group's PEL as an estimate for all
          * others. 
          *
-         * 每个消费者组都是一个分配，其PEL中的条目也是如此。我们使用第一组PEL的大小作
+         * 每个消费者组都是一个分配，其PEL中的节点也是如此。我们使用第一组PEL的大小作
          * 为对所有其他组的估计。
          * */
         if (s->cgroups && raxSize(s->cgroups)) {
@@ -101,7 +101,7 @@ size_t lazyfreeGetFreeEffort(robj *obj) {
  * a lazy free list instead of being freed synchronously. The lazy free list
  * will be reclaimed in a different bio.c thread. 
  *
- * 从数据库中删除键、值和相关的过期条目（如果有的话）。如果有足够的分配来释放值对象，
+ * 从数据库中删除键、值和相关的过期节点（如果有的话）。如果有足够的分配来释放值对象，
  * 则可以将其放入延迟释放列表，而不是同步释放。懒惰空闲列表将在另一个bio.c线程中回收。
  * */
 #define LAZYFREE_THRESHOLD 64
@@ -109,7 +109,7 @@ int dbAsyncDelete(redisDb *db, robj *key) {
     /* Deleting an entry from the expires dict will not free the sds of
      * the key, because it is shared with the main dictionary. 
      *
-     * 从过期dict中删除条目不会释放键的sds，因为它与主字典共享。
+     * 从过期dict中删除节点不会释放键的sds，因为它与主字典共享。
      * */
     if (dictSize(db->expires) > 0) dictDelete(db->expires,key->ptr);
 
