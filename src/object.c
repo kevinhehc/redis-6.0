@@ -139,6 +139,7 @@ robj *createStringObject(const char *ptr, size_t len) {
  * integer, because the object is going to be used as value in the Redis key
  * space (for instance when the INCR command is used), so we want LFU/LRU
  * values specific for each key. */
+// valueobj 指定是否使用共享的对象
 robj *createStringObjectFromLongLongWithOptions(long long value, int valueobj) {
     robj *o;
 
@@ -150,6 +151,7 @@ robj *createStringObjectFromLongLongWithOptions(long long value, int valueobj) {
         valueobj = 0;
     }
 
+    // 10000 一万以内的数据做共享
     if (value >= 0 && value < OBJ_SHARED_INTEGERS && valueobj == 0) {
         // 如果条件允许，使用共享对象
         // hhc
