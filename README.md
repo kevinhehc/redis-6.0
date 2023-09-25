@@ -1,5 +1,5 @@
 redis 源码注释，源码分析，流程分析。全网最新，最全！！！
-
+```
 1、流程分析主要在 md 目录：
 
 命令表的填充和查找流程.md
@@ -36,4 +36,5 @@ t_set.c ：应用层数据的 set 的实现逻辑
 t_zset.c ：应用层数据的 zset 的实现逻辑
 
 
-原来 README.md 改名为 README-BACKUP.md 了
+3、原来 README.md 改名为 README-BACKUP.md 了
+```
