@@ -23,3 +23,16 @@
     触发的过程是 serverCron--->checkChildrenDone--->backgroundSaveDoneHandler。 
 
 ```
+
+
+```
+3、加载
+
+3.1 默认文件加载「startLoading」
+
+3.2 从指定文件加载 「startLoadingFile」
+
+3.3 停止加载 「stopLoading」
+
+
+```

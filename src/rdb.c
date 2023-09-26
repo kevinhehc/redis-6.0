@@ -716,6 +716,8 @@ void *rdbGenericLoadStringObject(rio *rdb, int flags, size_t *lenptr) {
     }
 
     if (len == RDB_LENERR) return NULL;
+    // 没有压缩,直接读取原始字节返回
+    // 根据flag 返回不同的类型
     if (plain || sds) {
         void *buf = plain ? zmalloc(len) : sdsnewlen(SDS_NOINIT,len);
         if (lenptr) *lenptr = len;
@@ -738,10 +740,14 @@ void *rdbGenericLoadStringObject(rio *rdb, int flags, size_t *lenptr) {
     }
 }
 
+// 从rdb读取string
+// 返回obj-raw
 robj *rdbLoadStringObject(rio *rdb) {
     return rdbGenericLoadStringObject(rdb,RDB_LOAD_NONE,NULL);
 }
 
+// 从rdb读取string
+// 返回obj(带压缩)
 robj *rdbLoadEncodedStringObject(rio *rdb) {
     return rdbGenericLoadStringObject(rdb,RDB_LOAD_ENC,NULL);
 }
