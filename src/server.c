@@ -4070,12 +4070,19 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
 /* Propagate the specified command (in the context of the specified database id)
  * to AOF and Slaves.
  *
- * 传播给定命令到 AOF 或附属节点
+ * 传播给定命令到 AOF 或附属节点 (基于指定的数据库id)
  *
  * flags are an xor between:
+ * 标志是之间的异或：
+ *
  * + PROPAGATE_NONE (no propagation of command at all)
+ *   不传播任何的命令
+ *
  * + PROPAGATE_AOF (propagate into the AOF file if is enabled)
+ *   传播到AOF，如果AOF开启的话
+ *
  * + PROPAGATE_REPL (propagate into the replication link)
+ *   传播到复制链接
  *
  * This should not be used inside commands implementation since it will not
  * wrap the resulting commands in MULTI/EXEC. Use instead alsoPropagate(),
@@ -4085,8 +4092,15 @@ struct redisCommand *lookupCommandOrOriginal(sds name) {
  * command execution, for example when serving a blocked client, you
  * want to use propagate().
  */
-void propagate(struct redisCommand *cmd, int dbid, robj **argv, int argc,
-               int flags)
+
+/*
+ * redis每次执行完写操作后，会调用propagate函数将写操作追加到aof_buf缓冲区
+ */
+void propagate(struct redisCommand *cmd, // redis 的命令
+               int dbid,                 //
+               robj **argv,              //
+               int argc,                 //
+               int flags)                // PROPAGATE_NONE | PROPAGATE_AOF | PROPAGATE_REPL
 {
     if (server.aof_state != AOF_OFF && flags & PROPAGATE_AOF)
         feedAppendOnlyFile(cmd,dbid,argv,argc);
@@ -4203,7 +4217,9 @@ void preventCommandReplication(client *c) {
  *
  */
 // 执行客户端指定的命令
-void call(client *c, int flags) {
+void call(client *c,
+          int flags // CMD_CALL_FULL  Alias for SLOWLOG|STATS|PROPAGATE，核心流程传的是所有的
+          ) {
     long long dirty;
     ustime_t start, duration;
     int client_old_flags = c->flags;
@@ -4253,8 +4269,7 @@ void call(client *c, int flags) {
     /* After executing command, we will close the client after writing entire
      * reply if it is set 'CLIENT_CLOSE_AFTER_COMMAND' flag. 
      *
-     * 执行命令后，如果设置了“client_close_After_command”标
-     * 志，我们将在写入整个回复后关闭客户端。*/
+     * 执行命令后，如果设置了“client_close_After_command”标志，我们将在写入整个回复后关闭客户端。*/
     if (c->flags & CLIENT_CLOSE_AFTER_COMMAND) {
         c->flags &= ~CLIENT_CLOSE_AFTER_COMMAND;
         c->flags |= CLIENT_CLOSE_AFTER_REPLY;
@@ -4264,8 +4279,7 @@ void call(client *c, int flags) {
      * from Lua to go into the slowlog or to populate statistics. 
      *
      * 当调用EVAL加载AOF时，我们不希望从Lua调用的命令进入慢日志或填充统计信息。*/
-    // 命令由 AOF 文件在 lua 脚本中执行时
-    // 不开启 slowlog 和 统计功能
+    // 命令由 AOF 文件在 lua 脚本中执行时，不开启 slowlog 和 统计功能
     if (server.loading && c->flags & CLIENT_LUA)
         flags &= ~(CMD_CALL_SLOWLOG | CMD_CALL_STATS);
 
@@ -4345,8 +4359,8 @@ void call(client *c, int flags) {
          * propagation is needed. Note that modules commands handle replication
          * in an explicit way, so we never replicate them automatically. 
          *
-         * 仅当至少需要AOF/复制传播中的一个时，才调用propagation（）。请注意
-         * ，模块命令以明确的方式处理复制，因此我们从不自动复制它们。*/
+         * 仅当至少需要AOF/复制传播中的一个时，才调用propagation（）。
+         * 请注意，模块命令以明确的方式处理复制，因此我们从不自动复制它们。*/
         if (propagate_flags != PROPAGATE_NONE && !(c->cmd->flags & CMD_MODULE))
             propagate(c->cmd,c->db->id,c->argv,c->argc,propagate_flags);
     }

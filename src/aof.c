@@ -845,17 +845,20 @@ sds catAppendOnlyExpireAtCommand(sds buf, struct redisCommand *cmd, robj *key, r
 }
 
 // 将给定命令追加到 AOF 文件/缓存中
-void feedAppendOnlyFile(struct redisCommand *cmd, int dictid, robj **argv, int argc) {
+void feedAppendOnlyFile(
+                struct redisCommand *cmd,   // 命令
+                int dictid,                 // 数据库的id
+                robj **argv,                // 参数指针
+                int argc                    // 参数个数
+                ) {
     sds buf = sdsempty();
     robj *tmpargv[3];
 
     /* The DB this command was targeting is not the same as the last command
      * we appended. To issue a SELECT command is needed. 
      *
-     * 此命令所针对的DB与我们附加的上一个命令不同。需要发出SELECT命令。
+     * 当前 db 不是指定的 aof db。通过创建 SELECT 命令来切换数据库。
      * */
-    // 当前 db 不是指定的 aof db，
-    // 通过创建 SELECT 命令来切换数据库
     if (dictid != server.aof_selected_db) {
         char seldb[64];
 

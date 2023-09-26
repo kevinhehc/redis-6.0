@@ -526,7 +526,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                                           * */
 #define CLIENT_PREVENT_REPL_PROP (1<<20)  /* Don't propagate to slaves. 
                                            *
-                                           * 不要传播给奴隶。
+                                           * 不要传播给从节点。
                                            * */
 #define CLIENT_PREVENT_PROP (CLIENT_PREVENT_AOF_PROP|CLIENT_PREVENT_REPL_PROP)
 #define CLIENT_PENDING_WRITE (1<<21) /* Client has output to send but a write
@@ -677,7 +677,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                               * */
 #define CLIENT_TYPE_SLAVE 1  /* Slaves. 
                               *
-                              * 奴隶。
+                              * 从节点。
                               * */
 #define CLIENT_TYPE_PUBSUB 2 /* Clients subscribed to PubSub channels. 
                               *
@@ -695,7 +695,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                                     buffer configuration. Just the first
                                     three: normal, slave, pubsub. 
                                   *
-                                  * 要向输出缓冲区配置公开的客户端数。只有前三个：普通，奴隶，公共。
+                                  * 要向输出缓冲区配置公开的客户端数。只有前三个：普通，从节点，公共。
                                   * */
 
 /* Slave replication state. Used in server.repl_state for slaves to remember
