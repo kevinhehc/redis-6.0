@@ -79,7 +79,7 @@ double R_Zero, R_PosInf, R_NegInf, R_Nan;
 
 /* Global vars 
  *
- * 全球VARS*/
+ * 全局变量*/
 // 服务器状态
 struct redisServer server; /* Server global state 
                             *
