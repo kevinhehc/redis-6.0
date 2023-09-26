@@ -42,6 +42,7 @@ struct redisServer {
     /* AOF pipes used to communicate between parent and child during rewrite.
      * 在重写期间，用于在父级和子级之间进行通信的AOF管道。
      * */
+    // 这个功能在3.0的版本是没有的，之后的版本才有
     int aof_pipe_write_data_to_child;
     int aof_pipe_read_data_from_parent;
     int aof_pipe_write_ack_to_parent;
