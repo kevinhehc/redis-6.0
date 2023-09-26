@@ -34,40 +34,94 @@
 #ifndef __LATENCY_H
 #define __LATENCY_H
 
-#define LATENCY_TS_LEN 160 /* History length for every monitored event. */
+#define LATENCY_TS_LEN 160 /* History length for every monitored event. 
+                            *
+                            * 每个监控事件的历史记录长度。
+                            * */
 
 /* Representation of a latency sample: the sampling time and the latency
- * observed in milliseconds. */
+ * observed in milliseconds. 
+ *
+ * 延迟样本的表示：采样时间和观察到的延迟（以毫秒为单位）。
+ * */
 struct latencySample {
-    int32_t time; /* We don't use time_t to force 4 bytes usage everywhere. */
-    uint32_t latency; /* Latency in milliseconds. */
+    int32_t time; /* We don't use time_t to force 4 bytes usage everywhere. 
+                   *
+                   * 我们不使用time_t强制在任何地方使用4字节。
+                   * */
+    uint32_t latency; /* Latency in milliseconds. 
+                       *
+                       * 延迟（以毫秒为单位）。
+                       * */
 };
 
-/* The latency time series for a given event. */
+/* The latency time series for a given event. 
+ *
+ * 给定事件的延迟时间序列。
+ * */
 struct latencyTimeSeries {
-    int idx; /* Index of the next sample to store. */
-    uint32_t max; /* Max latency observed for this event. */
-    struct latencySample samples[LATENCY_TS_LEN]; /* Latest history. */
+    int idx; /* Index of the next sample to store. 
+              *
+              * 要存储的下一个样本的索引。
+              * */
+    uint32_t max; /* Max latency observed for this event. 
+                   *
+                   * 观察到此事件的最大延迟。
+                   * */
+    struct latencySample samples[LATENCY_TS_LEN]; /* Latest history. 
+                                                   *
+                                                   * 最新历史。
+                                                   * */
 };
 
-/* Latency statistics structure. */
+/* Latency statistics structure. 
+ *
+ * 延迟统计结构。
+ * */
 struct latencyStats {
-    uint32_t all_time_high; /* Absolute max observed since latest reset. */
-    uint32_t avg;           /* Average of current samples. */
-    uint32_t min;           /* Min of current samples. */
-    uint32_t max;           /* Max of current samples. */
-    uint32_t mad;           /* Mean absolute deviation. */
-    uint32_t samples;       /* Number of non-zero samples. */
-    time_t period;          /* Number of seconds since first event and now. */
+    uint32_t all_time_high; /* Absolute max observed since latest reset. 
+                             *
+                             * 自最近一次重置以来观察到的绝对最大值。
+                             * */
+    uint32_t avg;           /* Average of current samples. 
+                             *
+                             * 当前样本的平均值。
+                             * */
+    uint32_t min;           /* Min of current samples. 
+                             *
+                             * 当前样本的最小值。
+                             * */
+    uint32_t max;           /* Max of current samples. 
+                             *
+                             * 当前采样的最大值。
+                             * */
+    uint32_t mad;           /* Mean absolute deviation. 
+                             *
+                             * 平均绝对偏差。
+                             * */
+    uint32_t samples;       /* Number of non-zero samples. 
+                             *
+                             * 非零样本数。
+                             * */
+    time_t period;          /* Number of seconds since first event and now. 
+                             *
+                             * 从第一个事件到现在的秒数。
+                             * */
 };
 
 void latencyMonitorInit(void);
 void latencyAddSample(const char *event, mstime_t latency);
 int THPIsEnabled(void);
 
-/* Latency monitoring macros. */
+/* Latency monitoring macros. 
+ *
+ * 延迟监视宏。
+ * */
 
-/* Start monitoring an event. We just set the current time. */
+/* Start monitoring an event. We just set the current time. 
+ *
+ * 开始监视事件。我们只是设置了当前时间。
+ * */
 #define latencyStartMonitor(var) if (server.latency_monitor_threshold) { \
     var = mstime(); \
 } else { \
@@ -75,18 +129,27 @@ int THPIsEnabled(void);
 }
 
 /* End monitoring an event, compute the difference with the current time
- * to check the amount of time elapsed. */
+ * to check the amount of time elapsed. 
+ *
+ * 结束对事件的监视，计算与当前时间的差值，以检查经过的时间量。
+ * */
 #define latencyEndMonitor(var) if (server.latency_monitor_threshold) { \
     var = mstime() - var; \
 }
 
-/* Add the sample only if the elapsed time is >= to the configured threshold. */
+/* Add the sample only if the elapsed time is >= to the configured threshold. 
+ *
+ * 仅当运行时间>=配置的阈值时，才添加样本。
+ * */
 #define latencyAddSampleIfNeeded(event,var) \
     if (server.latency_monitor_threshold && \
         (var) >= server.latency_monitor_threshold) \
           latencyAddSample((event),(var));
 
-/* Remove time from a nested event. */
+/* Remove time from a nested event. 
+ *
+ * 从嵌套事件中删除时间。
+ * */
 #define latencyRemoveNestedEvent(event_var,nested_var) \
     event_var += nested_var;
 
