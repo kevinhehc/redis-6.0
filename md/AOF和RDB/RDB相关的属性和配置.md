@@ -1,4 +1,7 @@
 ```c
+
+// 「文件位置：server.h」
+
 struct redisServer {
     /* RDB persistence  RDB持久性 */
     long long dirty;                /* 上次保存后对数据库的更改 ---------- Changes to DB from the last save */

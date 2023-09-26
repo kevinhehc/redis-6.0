@@ -479,12 +479,17 @@ void flushAppendOnlyFile(int force) {
          * the data in page cache cannot be flushed in time. 
          *
          * 检查我们是否需要在aof缓冲区为空的情况下进行fsync，因为以前在 AOF_FSYNC_EVERYSEC 模式下，
-         * 只有当aof缓冲区时才会调用fsync，所以如果用户在一秒钟内调用fsync之前停止写入命令，
+         * 只有当aof缓冲区有数据时才会调用fsync，所以如果用户在一秒钟内调用fsync之前停止写入命令，
          * 则页面缓存中的数据无法及时刷新。
          * */
+
+        // 如果每秒都刷盘
         if (server.aof_fsync == AOF_FSYNC_EVERYSEC &&
+            // 记录的已刷盘大小和文件大小不一样 [hhc] 什么场景下出现的？
             server.aof_fsync_offset != server.aof_current_size &&
+            // 当前时间比上次的刷盘时间大
             server.unixtime > server.aof_last_fsync &&
+            // 没有在异步刷盘
             !(sync_in_progress = aofFsyncInProgress())) {
             goto try_fsync;
         } else {
@@ -497,7 +502,6 @@ void flushAppendOnlyFile(int force) {
         sync_in_progress = aofFsyncInProgress();
 
     // AOF 模式为每秒 fsync ，并且 force 不为 1
-    // 如果可以的话，推延冲洗
     if (server.aof_fsync == AOF_FSYNC_EVERYSEC && !force) {
         /* With this append fsync policy we do background fsyncing.
          * If the fsync is still in progress we can try to delay
@@ -515,11 +519,9 @@ void flushAppendOnlyFile(int force) {
                  *
                  * 之前没有写延迟，记住我们是延迟刷新和返回的。
                  * */
-                // 上一次没有推迟冲洗过，记录推延的当前时间，然后返回
                 server.aof_flush_postponed_start = server.unixtime;
                 return;
             } else if (server.unixtime - server.aof_flush_postponed_start < 2) {
-                // 允许在两秒之内的推延冲洗
                 /* We were already waiting for fsync to finish, but for less
                  * than two seconds this is still ok. Postpone again. 
                  *
@@ -530,9 +532,10 @@ void flushAppendOnlyFile(int force) {
             /* Otherwise fall trough, and go write since we can't wait
              * over two seconds. 
              *
-             * 否则就跌入低谷，继续写作，因为我们不能等超过两秒钟。
+             * 否则落空，继续写，因为我们不能等超过两秒钟。
              * */
-            // 记录冲洗推延次数
+
+            // 记录刷盘推延次数
             server.aof_delayed_fsync++;
             serverLog(LL_NOTICE,"Asynchronous AOF fsync is taking too long (disk is busy?). Writing the AOF buffer without waiting for fsync to complete, this may slow down Redis.");
         }
@@ -544,7 +547,7 @@ void flushAppendOnlyFile(int force) {
      * or alike 
      *
      * 我们要执行一次写入。至少如果我们正在编写的文件系统是一个真正的物理文件系统，那么
-     * 这应该是原子的。虽然这将使我们免于服务器被杀，但我认为对于整个服务器因电源问题或
+     * 这应该是原子的。虽然这将使我们免于服务器被终结，但我认为对于整个服务器因电源问题或
      * 类似问题而停止运行，没有什么可做的
      * */
 
@@ -2348,6 +2351,7 @@ void aofUpdateCurrentSize(void) {
     mstime_t latency;
 
     latencyStartMonitor(latency);
+    //redis_fstat = fstat/stat 由文件描述符取得文件状态。
     if (redis_fstat(server.aof_fd,&sb) == -1) {
         serverLog(LL_WARNING,"Unable to obtain the AOF file length. stat: %s",
             strerror(errno));

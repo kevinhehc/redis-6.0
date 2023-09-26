@@ -2524,7 +2524,8 @@ int serverCron(struct aeEventLoop *eventLoop, long long id, void *clientData) {
      * AOF延迟刷新：如果慢速fsync完成，请在每个cron周期尝试。
      * */
 
-    // 如果有需要，保存 AOF 文件到硬盘
+    // 由于刷盘未按时刷，设置了延迟刷盘的，这里会刷一下
+    // 未按时的原因：到了刷盘时间，但是之前的异步刷盘还没完成
     if (server.aof_flush_postponed_start) flushAppendOnlyFile(0);
 
     /* AOF write errors: in this case we have a buffer to flush as well and

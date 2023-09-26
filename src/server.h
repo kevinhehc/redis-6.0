@@ -2943,7 +2943,7 @@ struct redisServer {
                                      * */
     int aof_flush_sleep;            /* Micros to sleep before flush. (used by tests) 
                                      *
-                                     * Micros在冲水前睡觉。（用于测试）
+                                     * 在刷盘前睡眠一下。（用于测试）
                                      * */
     int aof_rewrite_scheduled;      /* Rewrite once BGSAVE terminates. 
                                      *

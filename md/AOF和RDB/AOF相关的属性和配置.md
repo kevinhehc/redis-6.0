@@ -1,4 +1,5 @@
 ```c
+// 「文件位置：server.h」
 
 struct redisServer {
     /* AOF persistence AOF持久化 */
@@ -6,20 +7,22 @@ struct redisServer {
     int aof_state;                    /* AOF状态 ---------- (ON|OFF|WAIT_REWRITE) */
     int aof_fsync;                    /* fsync（）策略的类型 ---------- Kind of fsync() policy */
     char *aof_filename;               /* AOF文件的名称 ---------- Name of the AOF file */
-    int aof_no_fsync_on_rewrite;      /* 如果正在进行重写，请不要进行fsync。 ---------- fsync if a rewrite is in prog. */
+    int aof_no_fsync_on_rewrite;      /* 如果正在进行rewrite，请不要进行fsync。默认0 ---------- fsync if a rewrite is in prog. */
     int aof_rewrite_perc;             /* 如果%增长大于M，则重写AOF。。。  ---------- Rewrite AOF if % growth is > M and... */
     off_t aof_rewrite_min_size;       /* AOF文件是至少N个字节。 ----------  the AOF file is at least N bytes. */
     off_t aof_rewrite_base_size;      /* 最新启动或重写时的AOF大小。 ----------  AOF size on latest startup or rewrite.  */
-    off_t aof_current_size;           /* AOF当前大小。  ----------   AOF current size. */
-    off_t aof_fsync_offset;           /* 已同步到磁盘的AOF偏移量。  ---------- offset which is already synced to disk. */
-    int aof_flush_sleep;              /* Micros在冲水前睡觉。（用于测试） ---------- Micros to sleep before flush. (used by tests) */
+    off_t aof_current_size;           /* AOF当前大小，通过读取aof文件获取的大小。  ----------   AOF current size. */
+    off_t aof_fsync_offset;           /* 已同步到磁盘的AOF偏移量，只有通过aof_current_size赋值。 
+                                       * offset which is already synced to disk. */
+    int aof_flush_sleep;              /* 在刷盘前睡眠一下。（用于测试） ---------- Micros to sleep before flush. (used by tests) */
     int aof_rewrite_scheduled;        /* BGSAVE终止后进行重写。---------- Rewrite once BGSAVE terminates. */
     pid_t aof_child_pid;              /* PID如果重写过程 ---------- PID if rewriting process    */
-    list *aof_rewrite_buf_blocks;     /* 在AOF重写期间保留更改。 ---------- Hold changes during an AOF rewrite. */
+    list *aof_rewrite_buf_blocks;     /* 在AOF重写期间，把数据也写入到这个缓冲区。 ---------- Hold changes during an AOF rewrite. */
     sds aof_buf;                      /* AOF缓冲区，在进入事件循环之前写入 ---------- AOF buffer, written before entering the event loop */
     int aof_fd;                       /* 当前所选AOF文件的文件描述符 ---------- File descriptor of currently selected AOF file */
     int aof_selected_db;              /* AOF中当前选择的DB ---------- Currently selected DB in AOF */
-    time_t aof_flush_postponed_start; /* 延迟AOF刷新的UNIX时间 ---------- UNIX time of postponed AOF flush */
+    time_t aof_flush_postponed_start; /* 延迟AOF刷新的UNIX时间。当配置是异步刷盘，但是到了刷盘时间，已有异步刷盘任务，还没结束，就延迟。
+                                       * UNIX time of postponed AOF flush */
     time_t aof_last_fsync;            /* 最后一次fsync（）的UNIX时间 ---------- UNIX time of last fsync() */
     time_t aof_rewrite_time_last;     /* 上次AOF重写运行所用的时间。 ---------- Time used by last AOF rewrite run. */
     time_t aof_rewrite_time_start;    /* 当前AOF重写开始时间。 ---------- Current AOF rewrite start time. */
