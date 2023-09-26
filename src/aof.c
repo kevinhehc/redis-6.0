@@ -2008,6 +2008,8 @@ int rewriteAppendOnlyFile(char *filename) {
 
     if (server.aof_use_rdb_preamble) {
         int error;
+
+        // 真正保存rdb文件的地方
         if (rdbSaveRio(&aof,&error,RDBFLAGS_AOF_PREAMBLE,NULL) == C_ERR) {
             errno = error;
             goto werr;
@@ -2036,11 +2038,11 @@ int rewriteAppendOnlyFile(char *filename) {
      *
      * 再读几次，从父进程获取更多数据。我们不可能永远读取（服务器从客户端接收数据的速度可
      * 能快于向子进程发送数据的速度），因此，一旦很有可能会有更多数据出现，我们就会尝试在
-     * 循环中读取更多数据。如果看起来我们在浪费时间，我们会中止（在没有新数据的情况下，
-     * 这种情况会在20ms后发生）。
+     * 循环中读取更多数据。如果看起来我们在浪费时间，我们会中止（在没有新数据的情况下，这种情况会在20ms后发生）。
      * */
     int nodata = 0;
     mstime_t start = mstime();
+    //在1秒内，而且读取的数据次数少于20
     while(mstime()-start < 1000 && nodata < 20) {
         if (aeWait(server.aof_pipe_read_data_from_parent, AE_READABLE, 1) <= 0)
         {
@@ -2172,7 +2174,7 @@ void aofChildPipeReadable(aeEventLoop *el, int fd, void *privdata, int mask) {
  *
  * 在重写期间创建用于父子进程IPC的管道。我们有一个数据管道用于向子级发送AOF增
  * 量diff，另外两个管道由子级用于发出重写完成的信号，因此不应再写入数据，另一个
- * 管道用于父级确认其理解此新条件。
+ * 管道用于父级确认其收到此新状态。
  * */
 int aofCreatePipes(void) {
     int fds[6] = {-1, -1, -1, -1, -1, -1};

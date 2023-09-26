@@ -263,7 +263,7 @@ struct redisCommand redisCommandTable[] = {
     /* Note that we can't flag set as fast, since it may perform an
      * implicit DEL of a large key. 
      *
-     * 请注意，我们不能这么快地标记set，因为它可能会执行大密钥的隐式DEL。*/
+     * 请注意，我们不能这么快地标记set，因为它可能会执行大键的隐式DEL。*/
     {"set",setCommand,-3,
      "write use-memory @string",
      0,NULL,1,1,1,0,0,0},
@@ -1507,7 +1507,7 @@ dictType hashDictType = {
  * map swapped keys to a list of clients waiting for this keys to be loaded. 
  *
  * 键列表哈希表类型将未编码的redis对象作为键，将列表作为值。它用于阻塞操作（B
- * LPOP），并将交换的密钥映射到等待加载此密钥的客户端列表。*/
+ * LPOP），并将交换的键映射到等待加载此键的客户端列表。*/
 dictType keylistDictType = {
     dictObjHash,               /* hash function  散列函数*/
     NULL,                        /* key dup  键复制*/
@@ -2033,7 +2033,7 @@ void databasesCron(void) {
 
     /* Defrag keys gradually. 
      *
-     * 逐渐对密钥进行碎片整理。*/
+     * 逐渐对键进行碎片整理。*/
     activeDefragCycle();
 
     /* Perform hash tables rehashing if needed, but only if there are no
@@ -2656,7 +2656,7 @@ extern int ProcessingEventsWhileBlocked;
  * 1。aeMain-主服务器循环
  * 2。processEventsWhileBlocked-在RDB/AOF加载期间处理客户端
  *
- * 如果它是从processEventsWhileBlocked调用的，我们不想执行所有操作（例如，我们不希望密钥过期），
+ * 如果它是从processEventsWhileBlocked调用的，我们不想执行所有操作（例如，我们不希望键过期），
  * 但我们确实需要执行一些操作。最重要的是freeClientsInAsyncFreeQueue，但我们也调用一
  * 些其他低风险函数。*/
 // 每次在运行事件 loop 之前，这个函数都会被运行一次
@@ -3753,7 +3753,7 @@ void initServer(void) {
      * operations incrementally, like clients timeout, eviction of unaccessed
      * expired keys and so forth. 
      *
-     * 创建定时器回调，这是我们增量处理许多后台操作的方法，如客户端超时、驱逐未处理的过期密钥等等。*/
+     * 创建定时器回调，这是我们增量处理许多后台操作的方法，如客户端超时、驱逐未处理的过期键等等。*/
     // 关联 server cron 到时间事件
     if (aeCreateTimeEvent(server.el, 1, serverCron, NULL, NULL) == AE_ERR) {
         serverPanic("Can't create event loop timers.");
@@ -4427,7 +4427,7 @@ void call(client *c,
     /* If the client has keys tracking enabled for client side caching,
      * make sure to remember the keys it fetched via this command. 
      *
-     * 如果客户端为客户端缓存启用了密钥跟踪，请确保记住通过该命令获取的密钥。*/
+     * 如果客户端为客户端缓存启用了键跟踪，请确保记住通过该命令获取的键。*/
     if (c->cmd->flags & CMD_READONLY) {
         client *caller = (c->flags & CLIENT_LUA && server.lua_caller) ?
                             server.lua_caller : c;

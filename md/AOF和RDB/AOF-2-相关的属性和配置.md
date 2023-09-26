@@ -5,7 +5,11 @@ struct redisServer {
     /* AOF persistence AOF持久化 */
     int aof_enabled;                  /* AOF开关配置 ---------- AOF configuration */
     int aof_state;                    /* AOF状态 ---------- (ON|OFF|WAIT_REWRITE) */
-    int aof_fsync;                    /* fsync（）策略的类型 ---------- Kind of fsync() policy */
+    int aof_fsync;                    /* fsync（）策略的类型 ---------- Kind of fsync() policy
+                                       * #define AOF_FSYNC_NO 0
+                                       * #define AOF_FSYNC_ALWAYS 1
+                                       * #define AOF_FSYNC_EVERYSEC 2  */
+    
     char *aof_filename;               /* AOF文件的名称 ---------- Name of the AOF file */
     int aof_no_fsync_on_rewrite;      /* 如果正在进行rewrite，请不要进行fsync。默认0 ---------- fsync if a rewrite is in prog. */
     int aof_rewrite_perc;             /* 如果%增长大于M，则重写AOF。。。  ---------- Rewrite AOF if % growth is > M and... */
@@ -32,7 +36,7 @@ struct redisServer {
     int rdb_save_incremental_fsync;   /* 在rdb保存时递增fsync？ ---------- fsync incrementally while rdb saving? */
     int aof_last_write_status;        /* C_OK or C_ERR  */
     int aof_last_write_errno;         /* 如果aof_last_write_status为ERR，则有效  ---------- Valid if aof_last_write_status is ERR */
-    int aof_load_truncated;           /* 不要在意外的AOF EOF上停下来。---------- Don't stop on unexpected AOF EOF. */
+    int aof_load_truncated;           /* 不要在意外的AOF EOF上停下来。默认1---------- Don't stop on unexpected AOF EOF. */
     int aof_use_rdb_preamble;         /* 在AOF重写时使用RDB前导码。---------- Use RDB preamble on AOF rewrites. */
     
     /* AOF pipes used to communicate between parent and child during rewrite.

@@ -3419,8 +3419,7 @@ void backgroundSaveDoneHandler(int exitcode, int bysignal) {
     /* Possibly there are slaves waiting for a BGSAVE in order to be served
      * (the first stage of SYNC is a bulk transfer of dump.rdb) 
      *
-     * 可能有从机在等待BGSAVE以便得到服务（SYNC的第一阶段是dump.rdb的
-     * 批量传输）
+     * 可能有从机在等待BGSAVE以便得到服务（SYNC的第一阶段是dump.rdb的批量传输）
      * */
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, type);
 }
