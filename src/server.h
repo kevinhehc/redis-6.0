@@ -782,7 +782,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
  * in its output queue. In the WAIT_BGSAVE states instead the server is waiting
  * to start the next background saving in order to send updates to it. 
  *
- * 奴隶的状态从主人的POV。用于客户端->replstate。在SEND_BULK
+ * 从节点的状态从主人的POV。用于 client->replstate。在SEND_BULK
  * 和ONLINE状态下，从设备在其输出队列中接收新的更新。在WAIT_BGSAVE
  * 状态下，服务器正在等待开始下一次后台保存，以便向其发送更新。
  * */
@@ -3263,12 +3263,12 @@ struct redisServer {
     time_t repl_backlog_time_limit; /* Time without slaves after the backlog
                                        gets released. 
                                      *
-                                     * 积压工作释放后没有奴隶的时间。
+                                     * 积压工作释放后没有从节点的时间。
                                      * */
     time_t repl_no_slaves_since;    /* We have no slaves since that time.
                                        Only valid if server.slaves len is 0. 
                                      *
-                                     * 从那时起我们就没有奴隶了。仅当server.slaves len为0时有效。
+                                     * 从那时起我们就没有从节点了。仅当server.slaves len为0时有效。
                                      * */
     int repl_min_slaves_to_write;   /* Min number of slaves to write. 
                                      *
@@ -3318,7 +3318,7 @@ struct redisServer {
                                      * */
     int repl_timeout;               /* Timeout after N seconds of master idle 
                                      *
-                                     * 主机空闲N秒后超时
+                                     * 主机空闲N秒后超时，默认值60
                                      * */
     client *master;     /* Client that is master for this slave 
                          *
@@ -3374,7 +3374,7 @@ struct redisServer {
                                  * */
     int repl_slave_ignore_maxmemory;    /* If true slaves do not evict. 
                                          *
-                                         * 如果真正的奴隶不驱逐。
+                                         * 如果真正的从节点不驱逐。
                                          * */
     time_t repl_down_since; /* Unix time at which link with master went down 
                              *
@@ -3420,7 +3420,7 @@ struct redisServer {
      * */
     dict *repl_scriptcache_dict;        /* SHA1 all slaves are aware of. 
                                          *
-                                         * SHA1所有奴隶都知道。
+                                         * SHA1所有从节点都知道。
                                          * */
     list *repl_scriptcache_fifo;        /* First in, first out LRU eviction. 
                                          *

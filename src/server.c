@@ -3232,9 +3232,8 @@ static void readOOMScoreAdj(void) {
  * depending on current role.
  
  *
- * 此功能将根据用户指定的配置来配置当前进程的oom_score_adj。这目前仅在
- * Linux上实现。process_class值-1表示OOM_CONFIG_MA
- * STER或OOM_CONFIG _REPLICA，具体取决于当前角色。*/
+ * 此功能将根据用户指定的配置来配置当前进程的oom_score_adj。这目前仅在Linux上实现。
+ * process_class值-1表示OOM_CONFIG_MASTER 或 OOM_CONFIG _REPLICA，具体取决于当前角色。*/
 int setOOMScoreAdj(int process_class) {
 
     if (server.oom_score_adj == OOM_SCORE_ADJ_NO) return C_OK;
