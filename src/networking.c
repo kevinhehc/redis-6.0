@@ -352,7 +352,7 @@ int prepareClientToWrite(client *c) {
     /* Masters don't receive replies, unless CLIENT_MASTER_FORCE_REPLY flag
      * is set.
      *
-     * 大师不会收到回复，除非设置了CLIENT_MASTER_FORCE_REPLY标志。
+     * 主节点不会收到回复，除非设置了CLIENT_MASTER_FORCE_REPLY标志。
      * */
     if ((c->flags & CLIENT_MASTER) &&
         !(c->flags & CLIENT_MASTER_FORCE_REPLY)) return C_ERR;

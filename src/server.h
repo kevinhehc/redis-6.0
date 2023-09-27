@@ -449,11 +449,11 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                                * */
 #define CLIENT_MASTER (1<<1)  /* This client is a master 
                                *
-                               * 这个客户是一个大师
+                               * 这个客户是一个主节点
                                * */
 #define CLIENT_MONITOR (1<<2) /* This client is a slave monitor, see MONITOR 
                                *
-                               * 此客户端是从属监视器，请参阅monitor
+                               * 此客户端是从节点监视器，请参阅monitor
                                * */
 #define CLIENT_MULTI (1<<3)   /* This client is in a MULTI context 
                                *
@@ -701,7 +701,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 /* Slave replication state. Used in server.repl_state for slaves to remember
  * what to do next. 
  *
- * 从属复制状态。在server.repl_state中用于从服务器，以便记住下一步
+ * 从节点复制状态。在server.repl_state中用于从服务器，以便记住下一步
  * 要做什么。
  * */
 #define REPL_STATE_NONE 0 /* No active replication 
@@ -805,7 +805,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 
 /* Slave capabilities. 
  *
- * 从属功能。
+ * 从节点功能。
  * */
 #define SLAVE_CAPA_NONE 0
 #define SLAVE_CAPA_EOF (1<<0)    /* Can parse the RDB EOF streaming format. 
@@ -1910,7 +1910,9 @@ typedef struct client {
                              * */
     int repl_put_online_on_ack; /* Install slave write handler on first ACK. 
                                  *
-                                 * 在第一个ACK上安装从属写入处理程序。
+                                 * 在第一个ACK上安装从节点写入处理程序。
+                                 * 0 ：
+                                 * 1 ：
                                  * */
     // 同步数据库的文件描述符
     int repldbfd;           /* Replication DB file descriptor. 
@@ -1955,7 +1957,7 @@ typedef struct client {
                                        copying this slave output buffer
                                        should use. 
                                      *
-                                     * FULLRESYNC应答偏移量复制此从属输出缓冲区的其他从属应该使用。
+                                     * FULLRESYNC应答偏移量复制此从节点输出缓冲区的其他从节点应该使用。
                                      * */
     char replid[CONFIG_RUN_ID_SIZE+1]; /* Master replication ID (if master). 
                                         *
@@ -1971,7 +1973,7 @@ typedef struct client {
                                     * */
     int slave_capa;         /* Slave capabilities: SLAVE_CAPA_* bitwise OR. 
                              *
-                             * 从属功能：Slave_CAPA_bitwise OR。
+                             * 从节点功能：Slave_CAPA_bitwise OR。
                              * */
     // 事务实现
     multiState mstate;      /* MULTI/EXEC state 
@@ -2063,7 +2065,7 @@ typedef struct client {
      *
      * 响应缓冲区
      * */
-    // 回复缓存的当前缓存
+    // 回复缓存的当前缓存索引，「数据的位置的position」
     int bufpos;
     // 回复缓存，可以保存多个回复
     char buf[PROTO_REPLY_CHUNK_BYTES];
@@ -2559,7 +2561,7 @@ struct redisServer {
     // 所有附属节点和 MONITOR
     list *slaves, *monitors;    /* List of slaves and MONITORs 
                                  *
-                                 * 从属设备和监视器列表
+                                 * 从节点设备和监视器列表
                                  * */
     // 当前客户端，只在创建崩溃报告时使用
     client *current_client;     /* Current client executing the command. 
@@ -2729,7 +2731,7 @@ struct redisServer {
                                      * */
     long long stat_sync_full;       /* Number of full resyncs with slaves. 
                                      *
-                                     * 具有从属服务器的完全重新同步数。
+                                     * 具有从节点服务器的完全重新同步数。
                                      * */
     long long stat_sync_partial_ok; /* Number of accepted PSYNC requests. 
                                      *
@@ -3209,11 +3211,13 @@ struct redisServer {
      * */
     char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. 
                                          *
-                                         * 我当前的复制ID。
+                                         * 我当前的复制ID
+                                         * 其实就是主从复制，主节点的节点Id
                                          * */
     char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master
                                          *
                                          * 从master继承的replid
+                                         * 我从节点升级为主节点的时候，这个值就是曾经作为从节点的对应的主节点的Id
                                          * */
     long long master_repl_offset;   /* My current replication offset 
                                      *
@@ -3222,6 +3226,7 @@ struct redisServer {
     long long second_replid_offset; /* Accept offsets up to this for replid2. 
                                      *
                                      * 接受replid2的最大偏移量。
+                                     * 其实就是变更时「slave 变成 master 」的时候，作为 slave 已经同步了的偏移量
                                      * */
     int slaveseldb;                 /* Last SELECTed DB in replication output 
                                      *
@@ -3233,7 +3238,7 @@ struct redisServer {
                                      * */
     char *repl_backlog;             /* Replication backlog for partial syncs 
                                      *
-                                     * 部分同步的复制囤积
+                                     * 部分同步的复制缓冲区
                                      * */
     long long repl_backlog_size;    /* Backlog circular buffer size 
                                      *
@@ -3242,16 +3247,17 @@ struct redisServer {
     long long repl_backlog_histlen; /* Backlog actual data length 
                                      *
                                      * 积压实际数据长度
+                                     * 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 
                                      * */
     long long repl_backlog_idx;     /* Backlog circular buffer current offset,
                                        that is the next byte will'll write to.
                                      *
-                                     * Backlog循环缓冲区当前偏移量，也就是下一个字节将写入的值。
+                                     * Backlog循环缓冲区当前偏移量，也就是下一个字节将写入的值。其实就是缓冲区待写入数据的开始位置
                                      * */
     long long repl_backlog_off;     /* Replication "master offset" of first
                                        byte in the replication backlog buffer.
                                      *
-                                     * 复制囤积缓冲区中第一个字节的复制“主偏移量”。
+                                     * 复制囤积缓冲区中第一个字节的复制“主偏移量”。其实就是待发送的数据的开始位置
                                      * */
     time_t repl_backlog_time_limit; /* Time without slaves after the backlog
                                        gets released. 
@@ -3265,7 +3271,7 @@ struct redisServer {
                                      * */
     int repl_min_slaves_to_write;   /* Min number of slaves to write. 
                                      *
-                                     * 要写入的最小从属数量。
+                                     * 要写入的最小从节点数量。
                                      * */
     int repl_min_slaves_max_lag;    /* Max lag of <count> slaves to write. 
                                      *
@@ -3277,7 +3283,7 @@ struct redisServer {
                                      * */
     int repl_diskless_sync;         /* Master send RDB to slaves sockets directly. 
                                      *
-                                     * 主控将RDB直接发送到从属套接字。
+                                     * 主节点将 RDB 直接通过 socket 发送到从节点。
                                      * */
     int repl_diskless_load;         /* Slave parse RDB directly from the socket.
                                      * see REPL_DISKLESS_LOAD_* enum 
@@ -3290,7 +3296,7 @@ struct redisServer {
                                      * */
     /* Replication (slave) 
      *
-     * 复制（从属）
+     * 复制（从节点）
      * */
     char *masteruser;               /* AUTH with this user and masterauth with master 
                                      *
@@ -3302,7 +3308,8 @@ struct redisServer {
                                      * */
     char *masterhost;               /* Hostname of master 
                                      *
-                                     * 主机主机名
+                                     * 主节点主机名
+                                     * 如果值为空才可以是主节点
                                      * */
     int masterport;                 /* Port of master 
                                      *
@@ -3314,7 +3321,7 @@ struct redisServer {
                                      * */
     client *master;     /* Client that is master for this slave 
                          *
-                         * 此从属服务器的主客户端
+                         * 此从节点服务器的主客户端
                          * */
     client *cached_master; /* Cached master to be reused for PSYNC. 
                             *
@@ -3326,7 +3333,7 @@ struct redisServer {
                               * */
     int repl_state;          /* Replication status if the instance is a slave 
                               *
-                              * 如果实例是从属实例，则复制状态
+                              * 如果实例是从节点实例，则复制状态
                               * */
     off_t repl_transfer_size; /* Size of RDB to read from master during sync. 
                                *
@@ -3619,7 +3626,7 @@ struct redisServer {
     int cluster_slave_no_failover;  /* Prevent slave from starting a failover
                                        if the master is in failure state. 
                                      *
-                                     * 如果主设备处于故障状态，请阻止从属设备启动故障转移。
+                                     * 如果主设备处于故障状态，请阻止从节点设备启动故障转移。
                                      * */
     char *cluster_announce_ip;  /* IP address to announce on cluster bus. 
                                  *
