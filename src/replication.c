@@ -240,6 +240,9 @@ void feedReplicationBacklog(void *ptr, // 待写入数据指针
      *
      * 这是一个循环缓冲区，所以在每次迭代时尽可能多地写入数据，如果达到极限，则回退“idx”索引。
      * */
+
+    // 因为repl_backlog是环形buffer，剩余的空间可能容纳不了len长的数据，当不够时，就需要环绕从头开始写，
+    // 因此这里需while循环。
     while(len) {
         // 主从同步缓冲区的剩余长度
         size_t thislen = server.repl_backlog_size - server.repl_backlog_idx;

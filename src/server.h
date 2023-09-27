@@ -3210,38 +3210,59 @@ struct redisServer {
                                      *
                                      * Syslog设施
                                      * */
+    
+    
     /* Replication (master) --- 复制（主）*/
     // 其实就是主从同步，作为主节点的节点Id
     char replid[CONFIG_RUN_ID_SIZE+1];  /* 我当前的复制ID。---------- My current replication ID.*/
-    // 我从节点升级为主节点的时候，这个值就是曾经作为从节点的对应的主节点的Id
+    
+    // 我由「从节点」升级为「主节点」的时候，这个值就是曾经作为「从节点」的对应的「主节点」的Id
     char replid2[CONFIG_RUN_ID_SIZE+1]; /* 从master继承的replid ---------- replid inherited from master*/
+    
+    //
     long long master_repl_offset;       /* 我当前的复制偏移量My current replication offset */
+    
     // 其实就是变更时「slave 变成 master 」的时候，作为 slave 已经同步了的偏移量
     long long second_replid_offset;     /* 接受replid2的最大偏移量。---- Accept offsets up to this for replid2.*/
+    
     int slaveseldb;                     /* 复制输出中上次选择的数据库 ----- Last SELECTed DB in replication output */
+    
     // 每隔一段时间去 ping 一下从节点，看下链接是否正常，默认10秒
     int repl_ping_slave_period;         /* 主设备每N秒ping一次从设备 ---- Master pings the slave every N seconds */
-    // 环形缓冲复制队列
-    char *repl_backlog;                 /* 部分同步的复制囤积 ---- Replication backlog for partial syncs */
+    
+    // 环形缓冲复制缓冲区
+    char *repl_backlog;                 /* 部分同步的复制缓冲区 ---- Replication backlog for partial syncs */
+    
     long long repl_backlog_size;        /* 积压工作循环缓冲区大小,默认1M --- Backlog circular buffer size */
-    // 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 = 也可以理解为「环形缓冲复制队列已用大小」，因为是环形的
+    
+    // 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 = 也可以理解为「环形缓冲复制缓冲区已用大小」，因为是环形的
     long long repl_backlog_histlen;     /* 积压实际数据长度 ---- Backlog actual data length */
+    
     // 将要发送的数据的结束位置
     long long repl_backlog_idx;         /* Backlog循环缓冲区当前偏移量，也就是下一个字节将写入的值。
                                          * Backlog circular buffer current offset,that is the next byte will'll write to. */
+    
     // 将要发送的数据的开始位置
-    long long repl_backlog_off;         /* 复制囤积缓冲区中第一个字节的复制“主偏移量”。
+    long long repl_backlog_off;         /* 复制缓冲区缓冲区中第一个字节的复制“主偏移量”。
                                          * Replication "master offset" of first byte in the replication backlog buffer. */
+    
     time_t repl_backlog_time_limit;     /* 积压工作释放后没有奴隶的时间。
                                          * Time without slaves after the backlog gets released. */
+    
     time_t repl_no_slaves_since;        /* 从那时起我们就没有奴隶了。仅当server.slaves len为0时有效。
                                          * We have no slaves since that time. Only valid if server.slaves len is 0.*/
+    
     int repl_min_slaves_to_write;       /* 要写入的最小从属数量。 Min number of slaves to write. */
+    
     int repl_min_slaves_max_lag;        /* ＜count＞从机写入的最大滞后时间。 Max lag of <count> slaves to write. */
+    
     int repl_good_slaves_count;         /* 滞后<=max_lag的从机数量。 Number of slaves with lag <= max_lag. */
+    
     int repl_diskless_sync;             /* 主控将RDB直接发送到从属套接字。 Master send RDB to slaves sockets directly. */
+    
     int repl_diskless_load;             /* 从服务器直接从套接字解析RDB。请参阅  REPL_DISKLESS_LOAD_* enum
                                          * Slave parse RDB directly from the socket.see REPL_DISKLESS_LOAD_* enum */
+    
     int repl_diskless_sync_delay;       /* 延迟启动无盘repl BGSAVE。 Delay to start a diskless repl BGSAVE. */
 
 
@@ -3250,35 +3271,59 @@ struct redisServer {
     // 主节点的用户名
     char *masteruser;                   /* 使用此用户进行AUTH，使用master进行master身份验证
                                          * AUTH with this user and masterauth with master  */
+    
     // 主节点的密码
     char *masterauth;                   /* 使用主密码进行AUTH AUTH with this password with master */
+    
     // 如果值为空才可以是主节点
     char *masterhost;                   /* 主机主机名 Hostname of master */
+    
     // 主节点的端口
     int masterport;                     /* 主机端口 Port of master */
+    
     // 通信超时时间，默认60秒
     int repl_timeout;                   /* 主机空闲N秒后超时 Timeout after N seconds of master idle */
+    
     // 作为从节点，需要拉数据来同步的主节点
     client *master;                     /* 此从属服务器的主客户端 Client that is master for this slave */
+    
     // 缓存的主节点，主要是主从节点变来变去的时候，用于缓存 节点id之类的，后面看下是否可以直接增量同步
     client *cached_master;              /* 缓存的主机将被重新用于PSYNC。 Cached master to be reused for PSYNC. */
+    
     int repl_syncio_timeout;            /* 同步I/O调用超时 Timeout for synchronous I/O calls */
+    
     // 同步的状态
     int repl_state;                     /* 如果实例是从属实例，则复制状态 Replication status if the instance is a slave  */
+    
     off_t repl_transfer_size;           /* 同步期间要从master读取的RDB的大小。 Size of RDB to read from master during sync. */
+    
     off_t repl_transfer_read;           /* 同步期间从master读取的RDB数量。 Amount of RDB read from master during sync.*/
+    
     off_t repl_transfer_last_fsync_off; /*上次fsync ed时的偏移量。 Offset when we fsync-ed last time. */
+    
     connection *repl_transfer_s;        /* 从->主SYNC连接 Slave -> Master SYNC connection*/
+    
     int repl_transfer_fd;               /* 从->主SYNC临时文件描述符 Slave -> Master SYNC temp file descriptor */
+    
     char *repl_transfer_tmpfile;        /* 从->主SYNC临时文件名 Slave-> master SYNC temp file name */
+    
     time_t repl_transfer_lastio;        /* 最新读取的Unix时间，用于超时 Unix time of the latest read, for timeout */
+    
     int repl_serve_stale_data;          /* 链接断开时提供过时数据？ Serve stale data when link is down? */
+    
     int repl_slave_ro;                  /* Slave是只读的吗？ Slave is read only?*/
+    
     int repl_slave_ignore_maxmemory;    /* 如果真正的从节点不驱逐。  If true slaves do not evict. */
+    
     time_t repl_down_since;             /* 与master链接断开的Unix时间 Unix time at which link with master went down */
+    
     int repl_disable_tcp_nodelay;       /* SYNC后禁用TCP_NODELAY？ Disable TCP_NODELAY after SYNC?*/
+    
     int slave_priority;                 /* 在INFO中报告并由Sentinel使用。 Reported in INFO and used by Sentinel. */
+    
     int slave_announce_port;            /* 给主机这个监听端口。 Give the master this listening port. */
+    
+    
     char *slave_announce_ip;            /* 将此ip地址提供给主机。 Give the master this ip address. */
 
     /* The following two fields is where we store master PSYNC replid/offset
