@@ -1934,12 +1934,12 @@ typedef struct client {
                              * 复制数据库前导码。
                              * */
 
-    // 从主节点已经读取的数据量 = querybuf + reploff
+    // 从「主节点」已经读取的数据量 = querybuf + reploff
     long long read_reploff; /* Read replication offset if this is a master. 
                              *
                              * 读取复制偏移量（如果这是主机）。
                              * */
-    // 从主节点已经应用的数据量  = read_reploff - querybuf
+    // 从「主节点」已经处理完的数据量  = read_reploff - querybuf
     long long reploff;      /* Applied replication offset if this is a master. 
                              *
                              * 如果这是主机，则应用复制偏移量。
@@ -2013,6 +2013,7 @@ typedef struct client {
     sds peerid;             /* Cached peer ID. 
                              *
                              * 缓存的对等方ID。
+                             * 其实就是ip+port
                              * */
     listNode *client_list_node; /* list node in client list 
                                  *

@@ -252,7 +252,7 @@ void feedReplicationBacklog(void *ptr, // 待写入数据指针
         // 写入索引往后移动
         server.repl_backlog_idx += thislen;
 
-        // 如果剩余长度没了，索引位置置 0
+        // 如果剩余长度没了，索引位置置 0，环形就从尾部转到头部
         if (server.repl_backlog_idx == server.repl_backlog_size)
             server.repl_backlog_idx = 0;
 
