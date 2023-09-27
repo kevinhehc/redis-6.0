@@ -1,4 +1,22 @@
 ```
+1、replicationCron 的执行时机
+
+---> 方法：Main 「文件位置：server.c」
+
+---> 方法：aeMain   「文件位置：ae.c」
+
+---> 方法：aeProcessEvents   「文件位置：ae.c」
+
+---> 方法：processTimeEvents    「文件位置：ae.c」
+
+---> 方法：serverCron    「文件位置：server.c」   【run_with_period(1000) 保证了一秒刷一次的逻辑 replicationCron】
+
+---> 方法：replicationCron   「文件位置：replication.c」
+
+```
+
+
+```
 2、写入增量缓存区的核心方法：feedReplicationBacklog
 
 2.1
