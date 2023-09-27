@@ -3142,6 +3142,7 @@ struct redisServer {
     int rdb_pipe_bufflen;           /* that was read from the the rdb pipe. 
                                      *
                                      * 这是从rdb管道中读取的。
+                                     * 在无盘复制中，缓冲区保存数据的长度
                                      * */
     int rdb_key_save_delay;         /* Delay in microseconds between keys while
                                      * writing the RDB. (for testings) 

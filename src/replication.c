@@ -65,7 +65,7 @@ int RDBGeneratedByReplication = 0;
  *
  * 将指针返回到表示从ip:listening_port对的字符串。最适用于日志记录，
  * 因为我们希望使用其IP地址和侦听端口来记录从节点设备，这对用户来说更清楚，例如：
- * “关闭与副本10.1.2.3:6380的连接”。
+ * “关闭与从节点10.1.2.3:6380的连接”。
  * */
 // 通过客户端获取ip和port，主要用于打印
 char *replicationGetSlaveName(client *c) {
@@ -872,7 +872,7 @@ int masterTryPartialResynchronization(client *c // c 是发送数据同步请求
 
     /* Fire the replica change modules event. 
      *
-     * 激发复制副本更改模块事件。
+     * 激发复制从节点更改模块事件。
      * */
     moduleFireServerEvent(REDISMODULE_EVENT_REPLICA_CHANGE,
                           REDISMODULE_SUBEVENT_REPLICA_CHANGE_ONLINE,
@@ -1070,8 +1070,7 @@ void syncCommand(client *c) {
      * if the connection with the master is lost. 
      *
      * 如果这是一个PSYNC命令，请尝试部分重新同步。如果它失败了，我们继续进行通常的
-     * 重新全量同步，但是当这种情况发生时，master TryPartialResyn
-     * chronization（）已经用：
+     * 重新全量同步，但是当这种情况发生时，master TryPartialResynchronization（）已经用：
      *
      * +FULLRESYNC＜replid＞＜offset＞
      *
@@ -1122,10 +1121,10 @@ void syncCommand(client *c) {
      * */
     c->replstate = SLAVE_STATE_WAIT_BGSAVE_START;
     if (server.repl_disable_tcp_nodelay)
-        connDisableTcpNoDelay(c->conn); /* Non critical if it fails. 
-                                         *
-                                         * 如果失败，则为非关键。
-                                         * */
+        connDisableTcpNoDelay(c->conn);   /* Non critical if it fails.
+                                                 *
+                                                 * 如果失败，则为非关键。
+                                                 * */
     c->repldbfd = -1;
     c->flags |= CLIENT_SLAVE;
     listAddNodeTail(server.slaves,c);
@@ -1151,7 +1150,7 @@ void syncCommand(client *c) {
 
     /* CASE 1: BGSAVE is in progress, with disk target. 
      *
-     * 案例1:BGSAVE正在进行中，具有磁盘目标。
+     * 情况1:BGSAVE正在进行中，具有磁盘目标。
      * */
     // 检查是否已经有 BGSAVE 在执行，否则就创建一个新的 BGSAVE 任务
     if (server.rdb_child_pid != -1 &&
@@ -1202,7 +1201,7 @@ void syncCommand(client *c) {
 
     /* CASE 2: BGSAVE is in progress, with socket target. 
      *
-     * 案例2:BGSAVE正在进行中，带有套接字目标。
+     * 情况2:BGSAVE正在进行中，带有套接字目标。
      * */
     } else if (server.rdb_child_pid != -1 &&
                server.rdb_child_type == RDB_CHILD_TYPE_SOCKET)
@@ -1218,7 +1217,7 @@ void syncCommand(client *c) {
 
     /* CASE 3: There is no BGSAVE is progress. 
      *
-     * 案例3：没有BGSAVE是进度。
+     * 情况3：没有BGSAVE是进度。
      * */
     } else {
         // 没有 BGSAVE 在进行，自己启动一个。
@@ -1267,8 +1266,7 @@ void syncCommand(client *c) {
  * REPLCONF＜option＞＜value＞＜option＜value＞。。。
  * 从节点使用此命令，以便在使用SYNC命令启动复制过程之前配置复制过程。目前，该命
  * 令的唯一用途是与主节点通信Slave redis节点的侦听端口，以便主节点可以在INFO输出中准确列出Slave及其侦听端口。
- * 将来可以使用相同的命令来配置复制以启动
- * 增量复制，而不是重新全量同步。
+ * 将来可以使用相同的命令来配置复制以启动增量复制，而不是重新全量同步。
  * */
 void replconfCommand(client *c) {
     int j;
@@ -1384,18 +1382,18 @@ void replconfCommand(client *c) {
  *    sending it to the replica.
  * 3) Update the count of "good replicas". 
  *
- * 这个函数将副本置于联机状态，并且应该在副本接收到用于初始同步的RDB文件之后立即
+ * 这个函数将从节点置于联机状态，并且应该在从节点接收到用于初始同步的RDB文件之后立即
  * 调用，并且我们终于可以发送增量命令流了。
  *
  * 它做了几件事：
  *
- * 1）将从节点服务器置于联机状态。请注意，对于已经处于ONLINE状态但将标志repl_put_ONLINE_on_ack设置为true的副本，
+ * 1）将从节点服务器置于联机状态。请注意，对于已经处于ONLINE状态但将标志repl_put_ONLINE_on_ack设置为true的从节点，
  * 也可能会调用该函数：在这种情况下，我们仍然需要安装写处理程序。这个函数会处理这个问题。
  *
  * 2）请确保可写事件已重新安装，因为调用
- * SYNC命令会禁用它，这样我们就可以累积输出缓冲区，而无需将其发送到副本。
+ * SYNC命令会禁用它，这样我们就可以累积输出缓冲区，而无需将其发送到从节点。
  *
- * 3）更新“良好复制副本”的计数。
+ * 3）更新“良好复制从节点”的计数。
  * */
 void putSlaveOnline(client *slave) {
     slave->replstate = SLAVE_STATE_ONLINE;
@@ -1412,7 +1410,7 @@ void putSlaveOnline(client *slave) {
     refreshGoodSlavesCount();
     /* Fire the replica change modules event. 
      *
-     * 激发复制副本更改模块事件。
+     * 激发复制从节点更改模块事件。
      * */
     moduleFireServerEvent(REDISMODULE_EVENT_REPLICA_CHANGE,
                           REDISMODULE_SUBEVENT_REPLICA_CHANGE_ONLINE,
@@ -1427,8 +1425,8 @@ void putSlaveOnline(client *slave) {
  * to take RDB files around, this violates certain policies in certain
  * environments. 
  *
- * 我们周期性地调用这个函数来删除由于复制而生成的RDB文件，否则节点就没有任何持久
- * 性。我们不希望没有持久性的节点携带RDB文件，这违反了某些环境中的某些策略。
+ * 我们周期性地调用这个函数来删除由于复制而生成的RDB文件，否则节点就没有任何持久性。
+ * 我们不希望没有持久性的节点携带RDB文件，这违反了某些环境中的某些策略。
  * */
 void removeRDBUsedToSyncReplicas(void) {
     /* If the feature is disabled, return ASAP but also clear the
@@ -1439,8 +1437,8 @@ void removeRDBUsedToSyncReplicas(void) {
      * because of replication recently. 
      *
      * 如果该功能被禁用，请返回ASAP，但也要清除RDBGeneratedByReplication标志（如果已设置）。
-     * 否则，如果该功能已启用，但稍后使用CONFIG SET禁用，则该标志可能会保持为1：然后，下次通过CONFIG SET重新启用
-     * 该功能时，即使最近由于复制而没有生成RDB，我们也会将其设置为1。
+     * 否则，如果该功能已启用，但稍后使用CONFIG SET禁用，则该标志可能会保持为1：
+     * 然后，下次通过CONFIG SET重新启用该功能时，即使最近由于复制而没有生成RDB，我们也会将其设置为1。
      * */
     if (!server.rdb_del_sync_files) {
         RDBGeneratedByReplication = 0;
@@ -1463,7 +1461,7 @@ void removeRDBUsedToSyncReplicas(void) {
                 delrdb = 0;
                 break; /* No need to check the other replicas. 
                         *
-                        * 无需检查其他复制副本。
+                        * 无需检查其他复制从节点。
                         * */
             }
         }
@@ -1483,8 +1481,8 @@ void removeRDBUsedToSyncReplicas(void) {
 /*
  * 将主节点的 .rdb 文件内容发送到附属节点
  *
- * 每次最大发送的字节数量有 REDIS_IOBUF_LEN 决定，
- * 视乎文件的大小和服务器的状态，整个发送过程可能会执行多次
+ * 每次最大发送的字节数量有 REDIS_IOBUF_LEN = 默认16k 决定，
+ * 根据文件的大小和服务器的状态，整个发送过程可能会执行多次
  */
 void sendBulkToSlave(connection *conn) {
     client *slave = connGetPrivateData(conn);
@@ -1586,7 +1584,7 @@ void rdbPipeWriteHandlerConnRemoved(struct connection *conn) {
 /* Called in diskless master during transfer of data from the rdb pipe, when
  * the replica becomes writable again. 
  *
- * 在从rdb管道传输数据期间，当副本再次变为可写时，在无盘主节点中调用。
+ * 在rdb socket 传输数据期间，当从节点再次变为可写时，在 diskless 主节点中调用。
  * */
 void rdbPipeWriteHandler(struct connection *conn) {
     serverAssert(server.rdb_pipe_bufflen>0);
@@ -1607,6 +1605,7 @@ void rdbPipeWriteHandler(struct connection *conn) {
     } else {
         slave->repldboff += nwritten;
         server.stat_net_output_bytes += nwritten;
+        // 如果还没写完，那就是标记了一下只是写了部分
         if (slave->repldboff < server.rdb_pipe_bufflen) {
             slave->repl_last_partial_write = server.unixtime;
             return; /* more data to write.. 
@@ -1620,7 +1619,7 @@ void rdbPipeWriteHandler(struct connection *conn) {
 
 /* Called in diskless master, when there's data to read from the child's rdb pipe 
  *
- * 当有数据要从子进程的rdb管道读取时，在无盘主节点中调用
+ * 当有数据要从子进程的rdb管道读取时，在 diskless 主节点中调用
  * */
 void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData, int mask) {
     UNUSED(mask);
@@ -1628,12 +1627,15 @@ void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData,
     UNUSED(eventLoop);
     int i;
     if (!server.rdb_pipe_buff)
-        server.rdb_pipe_buff = zmalloc(PROTO_IOBUF_LEN);
+        server.rdb_pipe_buff = zmalloc(PROTO_IOBUF_LEN); // PROTO_IOBUF_LEN = 16K
     serverAssert(server.rdb_pipe_numconns_writing==0);
 
     while (1) {
         server.rdb_pipe_bufflen = read(fd, server.rdb_pipe_buff, PROTO_IOBUF_LEN);
+
+        // 如果读异常，关闭 rdb_pipe_conns 上的客户端链接，关闭RDB子进程
         if (server.rdb_pipe_bufflen < 0) {
+            // errno 其实是个 #define，实际是个函数调用
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
             serverLog(LL_WARNING,"Diskless rdb transfer, read error sending DB to replicas: %s", strerror(errno));
@@ -1668,8 +1670,8 @@ void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData,
              * When the server detectes the child has exited, it can mark the replica as online, and
              * start streaming the replication buffers. 
              *
-             * 现在副本已经完成读取，请通知子进程可以安全退出。当服务器检测到子进程已退出时，它可以
-             * 将复制副本标记为联机，并开始流式传输复制缓冲区。
+             * 现在从节点已经完成读取，请通知子进程可以安全退出。当服务器检测到子进程已退出时，它可以
+             * 将复制从节点标记为联机，并开始流式传输复制缓冲区。
              * */
             close(server.rdb_child_exit_pipe);
             server.rdb_child_exit_pipe = -1;
@@ -1705,7 +1707,7 @@ void rdbPipeReadHandler(struct aeEventLoop *eventLoop, int fd, void *clientData,
             /* If we were unable to write all the data to one of the replicas,
              * setup write handler (and disable pipe read handler, below) 
              *
-             * 如果我们无法将所有数据写入其中一个副本，请设置写入处理程序（并禁用管道读取处理程
+             * 如果我们无法将所有数据写入其中一个从节点，请设置写入处理程序（并禁用管道读取处理程
              * 序，如下所示）
              * */
             if (nwritten != server.rdb_pipe_bufflen) {
@@ -1826,20 +1828,20 @@ void updateSlavesWaitingBgsave(int bgsaveerr, int type) {
                  * the RDB trasfer with the start of the other replication
                  * data. 
                  *
-                 * 注意：我们等待来自复制副本的REPLCONF ACK消息，以便真正将其联机（安装
+                 * 注意：我们等待来自复制从节点的REPLCONF ACK消息，以便真正将其联机（安装
                  * 写处理程序，以便可以传输累积的数据）。然而，我们会尽快更改复制状态，因为我们的从
                  * 属服务器现在在技术上是在线的。所以事情是这样运作的：
                  * 
                  * 1。我们结束了通过套接字传输RDB文件。
                  * 
-                 * 2.复制副本处于联机状态，但未安装写入处理程序。
+                 * 2.复制从节点处于联机状态，但未安装写入处理程序。
                  * 
-                 * 3.然而，复制副本会真正联机，并通过REPLCONF ACK命令将我们ping回来。
+                 * 3.然而，复制从节点会真正联机，并通过REPLCONF ACK命令将我们ping回来。
                  * 
-                 * 4.现在我们终于安装了写处理程序，并将迄今为止累积的缓冲区发送到副本。
+                 * 4.现在我们终于安装了写处理程序，并将迄今为止累积的缓冲区发送到从节点。
                  * 
                  * 但我们为什么这么做？因为当
-                 * 我们通过套接字直接流式传输RDB时，副本必须检测RDB EOF（文件末尾），这是
+                 * 我们通过套接字直接流式传输RDB时，从节点必须检测RDB EOF（文件末尾），这是
                  * RDB末尾的一个特殊随机字符串（对于流式传输的RDB，我们事先不知道长度）。如果
                  * 在这样的最终EOF之后没有发送更多的数据，则检测这样的最终的EOF串要简单得多并
                  * 且CPU密集度低。因此，我们不想将RDB传输的结束与其他复制数据的开始粘在一起。
@@ -2018,7 +2020,7 @@ void replicationCreateMasterClient(connection *conn, int dbid) {
  * the replica cannot be considered reliable and exists with an
  * error. 
  *
- * 此功能将尝试在主副本同步后重新启用AOF文件：如果多次尝试后失败，则无法认为副本
+ * 此功能将尝试在主从节点同步后重新启用AOF文件：如果多次尝试后失败，则无法认为从节点
  * 是可靠的，并且存在错误。
  * */
 void restartAOFAfterSYNC() {
@@ -2075,7 +2077,7 @@ dbBackup *disklessLoadMakeBackup(void) {
  * If the socket loading went wrong, we want to restore the old backups
  * into the server databases. 
  *
- * readSyncBulkPayload（）的Helper函数：当使用副本端无盘数
+ * readSyncBulkPayload（）的Helper函数：当使用从节点端无盘数
  * 据库加载时，Redis会先备份现有数据库，然后再从套接字加载新数据库。如果套接字
  * 加载出错，我们希望将旧备份恢复到服务器数据库中。
  * */
@@ -2329,7 +2331,7 @@ void readSyncBulkPayload(connection *conn) {
      *
      * 我们在以下情况之一中达到了这一点：
      * 
-     * 1。复制副本使用无盘复制，也就是说，它直接从套
+     * 1。复制从节点使用无盘复制，也就是说，它直接从套
      * 接字读取数据到Redis内存，而不使用磁盘上的临时RDB文件。在这种情况下，我们
      * 只是阻塞并读取套接字中的所有内容。
      * 
@@ -2349,7 +2351,7 @@ void readSyncBulkPayload(connection *conn) {
      * in order to save the current DB instead of throwing it away,
      * so that we can restore it in case of failed transfer. 
      *
-     * 当副本使用无盘RDB加载时，可以对其进行配置，以保存当前数据库，而不是将其丢弃，
+     * 当从节点使用无盘RDB加载时，可以对其进行配置，以保存当前数据库，而不是将其丢弃，
      * 这样我们就可以在传输失败的情况下恢复它。
      * */
     if (use_diskless_load &&
@@ -2410,7 +2412,7 @@ void readSyncBulkPayload(connection *conn) {
             /* Remove the half-loaded data in case we started with
              * an empty replica. 
              *
-             * 删除一半加载的数据，以防我们从一个空的复制副本开始。
+             * 删除一半加载的数据，以防我们从一个空的复制从节点开始。
              * */
             emptyDb(-1,empty_db_flags,replicationEmptyDbCallback);
 
@@ -2426,7 +2428,7 @@ void readSyncBulkPayload(connection *conn) {
              * failure, it'll be restarted when sync succeeds or the replica
              * gets promoted. 
              *
-             * 请注意，在SYNC失败时重新启动AOF没有意义，它将在同步成功或复制副本升级时重
+             * 请注意，在SYNC失败时重新启动AOF没有意义，它将在同步成功或复制从节点升级时重
              * 新启动。
              * */
             return;
@@ -2535,7 +2537,7 @@ void readSyncBulkPayload(connection *conn) {
             /* Note that there's no point in restarting the AOF on sync failure,
                it'll be restarted when sync succeeds or replica promoted. 
              *
-             * 请注意，在同步失败时重新启动AOF没有意义，它将在同步成功或复制副本升级时重新启动。
+             * 请注意，在同步失败时重新启动AOF没有意义，它将在同步成功或复制从节点升级时重新启动。
              * */
             return;
         }
@@ -3693,7 +3695,7 @@ void replicaofCommand(client *c) {
              * because it involves flushing all replicas (including this
              * client) 
              *
-             * 如果客户端已经是复制副本，则无法运行此命令，因为它涉及到刷新所有复制副本（包括此
+             * 如果客户端已经是复制从节点，则无法运行此命令，因为它涉及到刷新所有复制从节点（包括此
              * 客户端）
              * */
             addReplyError(c, "Command is not valid when client is a replica.");
@@ -3925,7 +3927,7 @@ void replicationCacheMasterUsingMyself(void) {
      *
      * 这将用于通过replicationCreateMasterClient（）填充字
      * 段server.master->reploff。稍后我们将创建的master设置
-     * 为server.cached_master，因此复制副本将为PSYNC使用这样的
+     * 为server.cached_master，因此复制从节点将为PSYNC使用这样的
      * 偏移量。
      * */
     server.master_initial_offset = server.master_repl_offset;
@@ -4214,7 +4216,7 @@ int replicationScriptCacheExists(sds sha1) {
  *
  * 因此，同步复制添加了一个新 的WAIT命令，格式为：
  * WAIT＜num_replicas＞＜milliseconds_timeout＞，它返回当我们最终至少有num_replikas时或达到
- * 超时时处理查询的副本数。
+ * 超时时处理查询的从节点数。
  *
  * 该命令是这样实现的：
  * - 每次客户端处理命令时，我们都会记住将该命令发送到从节点服务器后的复制偏移量。
@@ -4258,7 +4260,7 @@ int replicationCountAcksByOffset(long long offset) {
 /* WAIT for N replicas to acknowledge the processing of our latest
  * write command (and all the previous commands). 
  *
- * 等待N个副本以确认我们最近的写入命令（以及所有以前的命令）的处理。
+ * 等待N个从节点以确认我们最近的写入命令（以及所有以前的命令）的处理。
  * */
 void waitCommand(client *c) {
     mstime_t timeout;
@@ -4314,7 +4316,7 @@ void waitCommand(client *c) {
  * instead. 
  *
  * 这是由unlockClient（）调用的，用于执行阻塞操作类型特定的清理。我们只
- * 是将客户端从等待副本确认的客户端列表中删除。永远不要直接调用它，而是调用unlockClient（）。
+ * 是将客户端从等待从节点确认的客户端列表中删除。永远不要直接调用它，而是调用unlockClient（）。
  * */
 void unblockClientWaitingReplicas(client *c) {
     listNode *ln = listSearchKey(server.clients_waiting_acks,c);
@@ -4343,8 +4345,8 @@ void processClientsWaitingReplicas(void) {
          * may be unblocked without calling replicationCountAcksByOffset()
          * if the requested offset / replicas were equal or less. 
          *
-         * 每次我们发现一个客户端对给定的偏移量和副本数量感到满意时，我们都会记住它，这样，
-         * 如果请求的偏移量/副本数等于或小于，则下一个客户端可以在不调用replicationCountAcksByOffset（）的情况下被取消阻止。
+         * 每次我们发现一个客户端对给定的偏移量和从节点数量感到满意时，我们都会记住它，这样，
+         * 如果请求的偏移量/从节点数等于或小于，则下一个客户端可以在不调用replicationCountAcksByOffset（）的情况下被取消阻止。
          * */
         if (last_offset && last_offset > c->bpop.reploffset &&
                            last_numreplicas > c->bpop.numreplicas)
@@ -4566,8 +4568,8 @@ void replicationCron(void) {
              * by the fork child so if a disk-based replica is stuck it doesn't prevent the fork child
              * from terminating. 
              *
-             * 我们考虑只断开无磁盘副本的连接，因为基于磁盘的副本不是由fork子代提供的，所以
-             * 如果基于磁盘的复制副本被卡住，它不会阻止fork子进程终止。
+             * 我们考虑只断开无磁盘从节点的连接，因为基于磁盘的从节点不是由fork子代提供的，所以
+             * 如果基于磁盘的复制从节点被卡住，它不会阻止fork子进程终止。
              * */
             if (slave->replstate == SLAVE_STATE_WAIT_BGSAVE_END && server.rdb_child_type == RDB_CHILD_TYPE_SOCKET) {
                 if (slave->repl_last_partial_write != 0 &&
