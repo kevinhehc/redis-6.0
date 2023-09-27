@@ -219,7 +219,7 @@ typedef long long ustime_t; /* microsecond time type.
  * Usually children that are terminated with SIGUSR1 will exit with this
  * special code. 
  *
- * 子进程将使用此状态代码退出，以表示进程已终止而没有出现错误：这对于杀死正在保存的
+ * 子进程将使用此状态代码退出，以表示进程已终止而没有出现错误：这对于终止正在保存的
  * 子进程（RDB或AOF）非常有用，而不会在父进程中触发通常在写入错误时打开的写入
  * 保护。通常，以SIGUSR1终止的子级将使用此特殊代码退出。
  * */
@@ -1933,10 +1933,13 @@ typedef struct client {
                              *
                              * 复制数据库前导码。
                              * */
+
+    // 从主节点已经读取的数据量 = querybuf + reploff
     long long read_reploff; /* Read replication offset if this is a master. 
                              *
                              * 读取复制偏移量（如果这是主机）。
                              * */
+    // 从主节点已经应用的数据量  = read_reploff - querybuf
     long long reploff;      /* Applied replication offset if this is a master. 
                              *
                              * 如果这是主机，则应用复制偏移量。
@@ -3213,12 +3216,10 @@ struct redisServer {
     char replid[CONFIG_RUN_ID_SIZE+1];  /* My current replication ID. 
                                          *
                                          * 我当前的复制ID
-                                         * 其实就是主从复制，主节点的节点Id
                                          * */
     char replid2[CONFIG_RUN_ID_SIZE+1]; /* replid inherited from master
                                          *
                                          * 从master继承的replid
-                                         * 我从节点升级为主节点的时候，这个值就是曾经作为从节点的对应的主节点的Id
                                          * */
     long long master_repl_offset;   /* My current replication offset 
                                      *
@@ -3227,7 +3228,6 @@ struct redisServer {
     long long second_replid_offset; /* Accept offsets up to this for replid2. 
                                      *
                                      * 接受replid2的最大偏移量。
-                                     * 其实就是变更时「slave 变成 master 」的时候，作为 slave 已经同步了的偏移量
                                      * */
     int slaveseldb;                 /* Last SELECTed DB in replication output 
                                      *
@@ -3248,7 +3248,6 @@ struct redisServer {
     long long repl_backlog_histlen; /* Backlog actual data length 
                                      *
                                      * 积压实际数据长度
-                                     * 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 
                                      * */
     long long repl_backlog_idx;     /* Backlog circular buffer current offset,
                                        that is the next byte will'll write to.
@@ -3310,7 +3309,7 @@ struct redisServer {
     char *masterhost;               /* Hostname of master 
                                      *
                                      * 主节点主机名
-                                     * 如果值为空才可以是主节点
+                                     *
                                      * */
     int masterport;                 /* Port of master 
                                      *

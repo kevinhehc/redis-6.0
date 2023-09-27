@@ -278,7 +278,7 @@ unsigned long long bioWaitStepOfType(int type) {
  * used only when it's critical to stop the threads for some reason.
  * Currently Redis does this only on crash (for instance on SIGSEGV) in order
  * to perform a fast memory check without other threads messing with memory. */
-// 不进行清理，直接杀死进程，只在出现严重错误时使用
+// 不进行清理，直接终止进程，只在出现严重错误时使用
 void bioKillThreads(void) {
     int err, j;
 

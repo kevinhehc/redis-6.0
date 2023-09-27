@@ -3691,8 +3691,7 @@ void replicaofCommand(client *c) {
              * because it involves flushing all replicas (including this
              * client) 
              *
-             * 如果客户端已经是复制从节点，则无法运行此命令，因为它涉及到刷新所有复制从节点（包括此
-             * 客户端）
+             * 如果客户端已经是复制从节点，则无法运行此命令，因为它涉及到刷新所有复制从节点（包括此客户端）
              * */
             addReplyError(c, "Command is not valid when client is a replica.");
             return;
@@ -3817,7 +3816,8 @@ void replicationSendAck(void) {
  * It is cached into server.cached_master and flushed away using the following
  * functions. 
  *
- * 为了实现部分同步，我们需要能够在短暂断开连接后缓存主节点的客户端结构。它被缓存到server.cached_master中，并使用以下函数清除。
+ * 为了实现部分同步，我们需要能够在短暂断开连接后缓存主节点的客户端结构。
+ * 它被缓存到server.cached_master中，并使用以下函数清除。
  * */
 
 /* This function is called by freeClient() in order to cache the master
@@ -3825,20 +3825,27 @@ void replicationSendAck(void) {
  * ASAP after this function returns, so every action needed to avoid problems
  * with a client that is really "suspended" has to be done by this function.
  *
+ * 此函数由 freeClient()调用，以缓存主客户端结构而不是破坏它。
+ * freeClient()将在此函数返回后尽快返回，因此避免真正“挂起”的客户端出现问题所需的每个操作都必须由此函数完成。
+ *
+ *
  * The other functions that will deal with the cached master are:
+ *
+ * 其他将处理缓存主节点的函数有：
+ *
+ *
  *
  * replicationDiscardCachedMaster() that will make sure to kill the client
  * as for some reason we don't want to use it in the future.
  *
+ * replicationDiscardCachedMaster() 它将确保终止因为某原因我们将来不想使用它客户端。
+ *
+ *
+ *
  * replicationResurrectCachedMaster() that is used after a successful PSYNC
  * handshake in order to reactivate the cached master.
- 
  *
- * freeClient（）调用此函数是为了缓存主客户端结构，而不是破坏它。freeClient（）。
- * 其他将处理缓存主节点的函数有：replicationDiscardCachedMaster（），
- * 它将确保杀死客户端，因为出于某种原因，我们将来不想
- * 使用它。replicationResurrectCachedMaster（），
- * 用于在成功的PSYNC握手后重新激活缓存的主节点。
+ * replicationResurrectCachedMaster() 用于在成功的PSYNC握手后重新激活缓存的主节点。
  * */
 void replicationCacheMaster(client *c) {
     serverAssert(server.master != NULL && server.cached_master == NULL);
@@ -3855,11 +3862,16 @@ void replicationCacheMaster(client *c) {
      * offsets, including pending transactions, already populated arguments,
      * pending outputs to the master. 
      *
-     * 重置主客户端，以便准备好接受新命令：我们希望丢弃未处理的查询缓冲区和未处理的偏移
-     * 量，包括挂起的事务、已填充的参数、到主的挂起输出。
+     * 重置主客户端，以便准备好接受新命令：
+     * 我们希望丢弃未处理的查询缓冲区和未处理的偏移量，包括挂起的事务、已填充的参数、到主的挂起输出。
      * */
+
+    // 清除发送缓存
     sdsclear(server.master->querybuf);
+    // 清除接收缓存
     sdsclear(server.master->pending_querybuf);
+    // 读取的偏移量 = 已经处理的读取偏移量。
+    // 因为有部分在querybuf缓存，要丢弃了。
     server.master->read_reploff = server.master->reploff;
     if (c->flags & CLIENT_MULTI) discardTransaction(c);
     listEmpty(c->reply);
@@ -3871,8 +3883,7 @@ void replicationCacheMaster(client *c) {
     /* Save the master. Server.master will be set to null later by
      * replicationHandleMasterDisconnection(). 
      *
-     * 保存主控形状。Server.master稍后将由replicationHandl
-     * eMasterDisconnection（）设置为null。
+     * 保存主节点。Server.master稍后将由replicationHandleMasterDisconnection（）设置为null。
      * */
     server.cached_master = server.master;
 
@@ -4469,8 +4480,9 @@ void replicationCron(void) {
      * be able to detect a link disconnection even if the TCP connection
      * will not actually go down. 
      *
-     * 如果我们附属于从节点，不时地对他们进行PING。因此，从节点可以实现对主设备的显式
-     * 超时，并且即使TCP连接实际上不会断开，也能够检测到链路断开。
+     * 如果我们链接了从节点，不时地对他们进行PING。
+     *
+     * 因此，从节点可以实现对主节点的显式超时，并且即使TCP连接实际上不会断开，也能够检测到链路断开。
      * */
     listIter li;
     listNode *ln;
@@ -4478,8 +4490,9 @@ void replicationCron(void) {
 
     /* First, send PING according to ping_slave_period. 
      *
-     * 首先，根据PING_slave_period发送PING。
+     * 首先，根据 ping_slave_period 发送PING。
      * */
+    // repl_ping_slave_period = 10 ，即 10 秒
     if ((replication_cron_loops % server.repl_ping_slave_period) == 0 &&
         listLength(server.slaves))
     {
@@ -4489,8 +4502,8 @@ void replicationCron(void) {
          * match the one stored into 'mf_master_offset' state. 
          *
          * 请注意，如果Redis Cluster手动故障转移期间客户端暂停，我们不会发送PING：
-         * 否则，我们发送的PING将更改master和slave的复制偏移量，并且
-         * 将不再与存储在“mf_master_offset”状态的偏移量相匹配。
+         * 否则，我们发送的PING将更改master和slave的复制偏移量，
+         * 并且将不再与存储在“mf_master_offset”状态的偏移量相匹配。
          * */
         int manual_failover_in_progress =
             server.cluster_enabled &&
@@ -4524,8 +4537,7 @@ void replicationCron(void) {
      *
      * 如果我们失去了与主节点的连接，也要向我们所有的被锁住的从节点发送一条换行符，让从节点知道他
      * 们的主节点在线。这是必要的，因为子从节点服务器只接收来自顶级主服务器的代理数据，因此
-     * 没有显式ping以避免更改复制偏移。可以发送这种特殊的带外ping（换行），它们
-     * 对偏移量没有影响。
+     * 没有显式ping以避免更改复制偏移。可以发送这种特殊的带外ping（换行），它们对偏移量没有影响。
      *
      * 换行符将被从节点忽略，但会刷新最后一个交互计时器以防止超时。在这种情况下，我们忽略ping周期，
      * 并每秒刷新一次连接，因为某些超时设置为几秒钟（例如：PSYNC响应）。
@@ -4546,7 +4558,7 @@ void replicationCron(void) {
 
     /* Disconnect timedout slaves. 
      *
-     * 断开定时从节点的连接。
+     * 断开超时的从节点的连接。
      * */
     if (listLength(server.slaves)) {
         listIter li;

@@ -1197,7 +1197,7 @@ void serverLog(int level, const char *fmt, ...) {
  * 在没有类似printf功能的情况下，以从信号处理程序安全调用的方式记录固定消息。
  * 
  * 实际上，从Redis的角度来看，我们只将其用于不致命的信号。serverLog（）
- * 提供了无论如何都会杀死服务器的信号，以及我们需要类似printf功能的地方。*/ 
+ * 提供了无论如何都会终止服务器的信号，以及我们需要类似printf功能的地方。*/
 void serverLogFromHandler(int level, const char *msg) {
     int fd;
     int log_to_stdout = server.logfile[0] == '\0';
@@ -4843,7 +4843,7 @@ void closeListeningSockets(int unlink_unix_socket) {
 }
 
 /*
- * 在 Redis 被杀死前要执行的一系列保存和清理动作
+ * 在 Redis 被终止前要执行的一系列保存和清理动作
  */
 int prepareForShutdown(int flags) {
     /* When SHUTDOWN is called while the server is loading a dataset in
@@ -4867,16 +4867,16 @@ int prepareForShutdown(int flags) {
 
     /* Kill all the Lua debugger forked sessions. 
      *
-     * 杀死所有Lua调试器派生的会话。*/
+     * 终止所有Lua调试器派生的会话。*/
     ldbKillForkedSessions();
 
     /* Kill the saving child if there is a background saving in progress.
        We want to avoid race conditions, for instance our saving child may
        overwrite the synchronous saving did by SHUTDOWN. 
      *
-     * 如果正在进行后台保存，则杀死正在保存的子项。我们希望避免竞争条件，例如，我们的保
+     * 如果正在进行后台保存，则终止正在保存的子项。我们希望避免竞争条件，例如，我们的保
      * 存子项可能会覆盖SHUTDOWN所做的同步保存。*/
-    // 杀死子进程的 RDB 保存进程，以免覆盖等会可能要保存的 RDB 文件
+    // 终止子进程的 RDB 保存进程，以免覆盖等会可能要保存的 RDB 文件
     if (server.rdb_child_pid != -1) {
         serverLog(LL_WARNING,"There is a child saving an .rdb. Killing it!");
         /* Note that, in killRDBChild, we call rdbRemoveTempFile that will
@@ -4892,7 +4892,7 @@ int prepareForShutdown(int flags) {
 
     /* Kill module child if there is one. 
      *
-     * 杀死模块子级（如果有）。*/
+     * 终止模块子级（如果有）。*/
     if (server.module_child_pid != -1) {
         serverLog(LL_WARNING,"There is a module fork child. Killing it!");
         TerminateModuleForkChild(server.module_child_pid,0);
@@ -4902,7 +4902,7 @@ int prepareForShutdown(int flags) {
         /* Kill the AOF saving child as the AOF we already have may be longer
          * but contains the full dataset anyway. 
          *
-         * 杀死保存AOF的子项，因为我们已经拥有的AOF可能更长，但无论如何都包含完整的数据集。*/
+         * 终止保存AOF的子项，因为我们已经拥有的AOF可能更长，但无论如何都包含完整的数据集。*/
         if (server.aof_child_pid != -1) {
             /* If we have AOF enabled but haven't written the AOF yet, don't
              * shutdown or else the dataset will be lost. 

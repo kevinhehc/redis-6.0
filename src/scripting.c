@@ -1539,7 +1539,7 @@ void luaMaskCountHook(lua_State *lua, lua_Debug *ar) {
     // 在脚本上下文中，启动文件事件处理（等待 SCRIPT KILL 或 SHUTDOWN NOSAVE）
     if (server.lua_timedout) processEventsWhileBlocked();
     if (server.lua_kill) {
-        // 杀死脚本
+        // 终止脚本
         serverLog(LL_WARNING,"Lua script killed by user with SCRIPT KILL.");
         lua_pushstring(lua,"Script killed by user with SCRIPT KILL...");
         lua_error(lua);
@@ -1685,7 +1685,7 @@ void evalGenericCommand(client *c, int evalsha) {
     server.lua_cur_script = funcname + 2;
     // 脚本开始时间
     server.lua_time_start = mstime();
-    // 是否杀死脚本
+    // 是否终止脚本
     server.lua_kill = 0;
     // 只在开启时间限制时使用钩子
     if (server.lua_time_limit > 0 && ldb.active == 0) {

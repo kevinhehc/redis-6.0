@@ -536,7 +536,7 @@ int clusterLockConfig(char *filename) {
      *
      *
      * fork之后，子进程会得到父进程打开的fd，我们需要将“fd”保存到“cluster_config_file_lock_fd”中，
-     * 这样在redisFork（）中，它就会在子进程中关闭。如果它没有关闭，当主进程被杀死-9，但子进程（reds-aof rewrite）
+     * 这样在redisFork（）中，它就会在子进程中关闭。如果它没有关闭，当主进程被终止-9，但子进程（reds-aof rewrite）
      * 仍然活着时，fd（锁）仍将由子进程持有，主进程将无法获得锁，意味着无法启动。
      * */
     server.cluster_config_file_lock_fd = fd;

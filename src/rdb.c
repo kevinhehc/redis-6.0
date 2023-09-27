@@ -3434,7 +3434,7 @@ void backgroundSaveDoneHandler(int exitcode, int bysignal) {
  * the child did not exit for an error, but because we wanted), and performs
  * the cleanup needed. 
  *
- * 使用SIGUSR1杀死保存RDB的进程（这样父级就会知道子进程不是因为错误而退出，
+ * 使用SIGUSR1终止保存RDB的进程（这样父级就会知道子进程不是因为错误而退出，
  * 而是因为我们想要），并执行所需的清理。
  * */
 void killRDBChild(void) {

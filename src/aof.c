@@ -283,12 +283,12 @@ void killAppendOnlyChild(void) {
     if (server.aof_child_pid == -1) return;
     /* Kill AOFRW child, wait for child exit. 
      *
-     * 杀死 AOFRW 子进程，等待子级退出。
+     * 终止 AOFRW 子进程，等待子级退出。
      * */
     serverLog(LL_NOTICE,"Killing running AOF rewrite child: %ld",
         (long) server.aof_child_pid);
 
-    // 杀死正在执行的 AOF 重写进程
+    // 终止正在执行的 AOF 重写进程
     if (kill(server.aof_child_pid,SIGUSR1) != -1) {
         while(wait3(&statloc,0,NULL) != server.aof_child_pid);
     }
@@ -2562,7 +2562,7 @@ void backgroundRewriteDoneHandler(int exitcode, int bysignal) {
         /* SIGUSR1 is whitelisted, so we have a way to kill a child without
          * triggering an error condition. 
          *
-         * SIGUSR1被列入白名单，因此我们有一种在不触发错误条件的情况下杀死孩子的方法
+         * SIGUSR1被列入白名单，因此我们有一种在不触发错误条件的情况下终止孩子的方法
          * 。
          * */
         if (bysignal != SIGUSR1)

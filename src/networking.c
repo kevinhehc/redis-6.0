@@ -3155,7 +3155,7 @@ NULL
         }
 
         /* Iterate clients killing all the matching clients.
-         * 迭代客户端杀死所有匹配的客户端。
+         * 迭代客户端终止所有匹配的客户端。
          * */
         listRewind(server.clients,&li);
         while ((ln = listNext(&li)) != NULL) {
