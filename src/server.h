@@ -1906,7 +1906,7 @@ typedef struct client {
     // 客户端当前的同步状态
     int replstate;          /* Replication state if this is a slave. 
                              *
-                             * 复制状态（如果这是从机）。
+                             * 复制状态（如果这是从节点）。
                              * */
     int repl_put_online_on_ack; /* Install slave write handler on first ACK. 
                                  *
@@ -1946,11 +1946,11 @@ typedef struct client {
                              * */
     long long repl_ack_off; /* Replication ack offset, if this is a slave. 
                              *
-                             * 复制ack偏移量，如果这是从机。
+                             * 复制ack偏移量，如果这是从节点。
                              * */
     long long repl_ack_time;/* Replication ack time, if this is a slave. 
                              *
-                             * 复制ack时间，如果这是从机。
+                             * 复制ack时间，如果这是从节点。
                              * */
     long long repl_last_partial_write; /* The last time the server did a partial write from the RDB child pipe to this replica  
                                         *
@@ -3219,10 +3219,10 @@ struct redisServer {
     // 我由「从节点」升级为「主节点」的时候，这个值就是曾经作为「从节点」的对应的「主节点」的Id
     char replid2[CONFIG_RUN_ID_SIZE+1]; /* 从master继承的replid ---------- replid inherited from master*/
     
-    //
+    // 其实就是所有需要同步数据的总长度，绝对偏移
     long long master_repl_offset;       /* 我当前的复制偏移量My current replication offset */
-    
-    // 其实就是变更时「slave 变成 master 」的时候，作为 slave 已经同步了的偏移量
+
+    // 我由「从节点」升级为「主节点」的时候，这个值就是曾经作为「从节点」的对应的「主节点」的偏移量，其实就是数据的总长度
     long long second_replid_offset;     /* 接受replid2的最大偏移量。---- Accept offsets up to this for replid2.*/
     
     int slaveseldb;                     /* 复制输出中上次选择的数据库 ----- Last SELECTed DB in replication output */
@@ -3230,19 +3230,20 @@ struct redisServer {
     // 每隔一段时间去 ping 一下从节点，看下链接是否正常，默认10秒
     int repl_ping_slave_period;         /* 主设备每N秒ping一次从设备 ---- Master pings the slave every N seconds */
     
-    // 环形缓冲复制缓冲区
+    // 环形缓冲复制缓冲区的指针
     char *repl_backlog;                 /* 部分同步的复制缓冲区 ---- Replication backlog for partial syncs */
-    
+
+    // 环形缓冲复制缓冲区的大小
     long long repl_backlog_size;        /* 积压工作循环缓冲区大小,默认1M --- Backlog circular buffer size */
     
     // 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 = 也可以理解为「环形缓冲复制缓冲区已用大小」，因为是环形的
     long long repl_backlog_histlen;     /* 积压实际数据长度 ---- Backlog actual data length */
     
-    // 将要发送的数据的结束位置
+    // 将要发送出去的数据的结束位置，相对位置
     long long repl_backlog_idx;         /* Backlog循环缓冲区当前偏移量，也就是下一个字节将写入的值。
                                          * Backlog circular buffer current offset,that is the next byte will'll write to. */
     
-    // 将要发送的数据的开始位置
+    // 将要发送出去的数据的开始位置，绝对位置
     long long repl_backlog_off;         /* 复制缓冲区缓冲区中第一个字节的复制“主偏移量”。
                                          * Replication "master offset" of first byte in the replication backlog buffer. */
     
@@ -3252,13 +3253,17 @@ struct redisServer {
     time_t repl_no_slaves_since;        /* 从那时起我们就没有奴隶了。仅当server.slaves len为0时有效。
                                          * We have no slaves since that time. Only valid if server.slaves len is 0.*/
     
-    int repl_min_slaves_to_write;       /* 要写入的最小从属数量。 Min number of slaves to write. */
+    // 如果实际值repl_good_slaves_count小于这个值，那么阻塞客户端的写入
+    // 具体是通过 refreshGoodSlavesCount 方法判断的，要满足两个条件:
+    //   1: 客户端的状态是 SLAVE_STATE_ONLINE，即完成了RDB文件的传输
+    //   2: 最新的响应的时间跟当前时间的差值还没超过 「repl_min_slaves_max_lag」
+    int repl_min_slaves_to_write;       /* 要写入的最小从节点数量。 Min number of slaves to write. */
     
-    int repl_min_slaves_max_lag;        /* ＜count＞从机写入的最大滞后时间。 Max lag of <count> slaves to write. */
+    int repl_min_slaves_max_lag;        /* ＜count＞从节点写入的最大滞后时间。 Max lag of <count> slaves to write. */
     
-    int repl_good_slaves_count;         /* 滞后<=max_lag的从机数量。 Number of slaves with lag <= max_lag. */
+    int repl_good_slaves_count;         /* 滞后<=max_lag的从节点数量。 Number of slaves with lag <= max_lag. */
     
-    int repl_diskless_sync;             /* 主控将RDB直接发送到从属套接字。 Master send RDB to slaves sockets directly. */
+    int repl_diskless_sync;             /* 主控将RDB直接发送到从节点套接字。 Master send RDB to slaves sockets directly. */
     
     int repl_diskless_load;             /* 从服务器直接从套接字解析RDB。请参阅  REPL_DISKLESS_LOAD_* enum
                                          * Slave parse RDB directly from the socket.see REPL_DISKLESS_LOAD_* enum */
@@ -3267,7 +3272,7 @@ struct redisServer {
 
 
 
-    /* Replication (slave) 复制（从属）*/
+    /* Replication (slave) 复制（从节点）*/
     // 主节点的用户名
     char *masteruser;                   /* 使用此用户进行AUTH，使用master进行master身份验证
                                          * AUTH with this user and masterauth with master  */
@@ -3285,7 +3290,7 @@ struct redisServer {
     int repl_timeout;                   /* 主机空闲N秒后超时 Timeout after N seconds of master idle */
     
     // 作为从节点，需要拉数据来同步的主节点
-    client *master;                     /* 此从属服务器的主客户端 Client that is master for this slave */
+    client *master;                     /* 此从节点服务器的主客户端 Client that is master for this slave */
     
     // 缓存的主节点，主要是主从节点变来变去的时候，用于缓存 节点id之类的，后面看下是否可以直接增量同步
     client *cached_master;              /* 缓存的主机将被重新用于PSYNC。 Cached master to be reused for PSYNC. */
@@ -3293,7 +3298,7 @@ struct redisServer {
     int repl_syncio_timeout;            /* 同步I/O调用超时 Timeout for synchronous I/O calls */
     
     // 同步的状态
-    int repl_state;                     /* 如果实例是从属实例，则复制状态 Replication status if the instance is a slave  */
+    int repl_state;                     /* 如果实例是从节点实例，则复制状态 Replication status if the instance is a slave  */
     
     off_t repl_transfer_size;           /* 同步期间要从master读取的RDB的大小。 Size of RDB to read from master during sync. */
     
@@ -3547,7 +3552,7 @@ struct redisServer {
                                     * */
     int cluster_slave_validity_factor; /* Slave max data age for failover. 
                                         *
-                                        * 从机故障切换的最大数据使用期限。
+                                        * 从节点故障切换的最大数据使用期限。
                                         * */
     int cluster_require_full_coverage; /* If true, put the cluster down if
                                           there is at least an uncovered slot.

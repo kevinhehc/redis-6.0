@@ -249,10 +249,12 @@ void feedReplicationBacklog(void *ptr, // 待写入数据指针
 
         // 如果剩余长度大于待写入长度
         if (thislen > len) thislen = len;
-            // 由 参数2 指向地址为起始地址的连续 参数3 个字节的数据复制到以 参数1 指向地址为起始地址的空间内。
+            // 由 「参数2」 指向地址为起始地址的连续 「参数3」 个字节的数据复制到以 「参数1」 指向地址为起始地址的空间内。
             memcpy(server.repl_backlog+server.repl_backlog_idx,p,thislen);
 
-        // 写入索引往后移动
+        // 写入索引往后移动，有两种情况：
+        //   1: 缓存区够写，继续写, repl_backlog_idx还在repl_backlog_size内
+        //   2: 缓存区不够写，继续写, 写满剩余的，然后 repl_backlog_idx 挪到缓冲区的头部=0
         server.repl_backlog_idx += thislen;
 
         // 如果剩余长度没了，索引位置置 0，环形就从尾部转到头部
@@ -305,9 +307,9 @@ void feedReplicationBacklogWithObject(robj *o) {
  * stream. Instead if the instance is a slave and has sub-slaves attached,
  * we use replicationFeedSlavesFromMasterStream() 
  *
- * 将写入命令传播到从节点服务器，并填充同步缓冲区。如果节点是主节点，则使用此函数：我们
- * 使用客户端接收的命令来创建复制流。相反，如果节点是从节点并附加了子从节点，则使用
- * replicationFeedSlavesFromMasterStream（）
+ * 将写入命令传播到从节点服务器，并填充同步缓冲区。如果节点是主节点，则使用此函数：我们使用客户端接收的命令来创建复制流。
+ *
+ * 相反，如果节点是从节点并附加了子从节点，则使用replicationFeedSlavesFromMasterStream（）
  * */
 void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
     listNode *ln;
@@ -324,6 +326,7 @@ void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
      * 如果节点不是顶级主节点，请尽快返回：我们只代理从主节点接收的数据流，以便传播*identicalreplication流。
      * 通过这种方式，该从节点服务器可以通告与主服务器相同的复制ID（因为它共享主服务器复制历史，并且具有相同的缓冲区和偏移）。
      * */
+    // 表示是从节点
     if (server.masterhost != NULL) return;
 
     /* If there aren't slaves, and there is no backlog buffer to populate,
@@ -626,14 +629,19 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
      *
      * 将j指向最旧的字节，它实际上是我们的server.repl_backlog_off字节。
      * */
-    // 已发送的数据空间 + 剩余可写入空间 = server.repl_backlog_size-server.repl_backlog_histlen
-    // j = server.repl_backlog_idx + 已发送的数据空间 + 剩余可写入空间
-    // % 主要解决：
-    //           server.repl_backlog_idx = server.repl_backlog_size
-    //           server.repl_backlog_histlen = 0
-    //           等的情况。
 
-    // [hhc]
+    // j 指向 将要发送出去的数据的开始位置，相对位置。 repl_backlog_off 是绝对位置
+    // 下面详细讲解j如何求值的：
+    //    「server.repl_backlog_idx」是肯定大于 0 的
+    //    「server.repl_backlog_histlen」也是肯定大于 0 的
+    //     原式子 ：  j = (server.repl_backlog_idx + (server.repl_backlog_size-server.repl_backlog_histlen)) % server.repl_backlog_size;
+    //     ------>  j = ((server.repl_backlog_idx -server.repl_backlog_histlen) + server.repl_backlog_size ) % server.repl_backlog_size;
+    //     ------>     因为是取模，所以 （+ server.repl_backlog_size） 去掉
+    //     ------>   j = (server.repl_backlog_idx - server.repl_backlog_histlen) % server.repl_backlog_size;
+    //     ------>   j =  server.repl_backlog_idx - server.repl_backlog_histlen
+
+    // 然后不太理解为什么作者写成下面的样子，看着头晕，也没想明白，但是结果是一样的
+
     j = (server.repl_backlog_idx +
         (server.repl_backlog_size-server.repl_backlog_histlen)) %
         server.repl_backlog_size;
@@ -643,6 +651,8 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
      *
      * 放弃要查找到指定“偏移量”的数据量。
      * */
+    // 取模，因为是环形的缓冲区，可以走了一圈了
+    // 这个时候 j 是真正想要发送出去数据的开始位置，因为已经加上了跳过的数据了
     j = (j + skip) % server.repl_backlog_size;
 
     /* Feed slave with data. Since it is a circular buffer we have to
@@ -650,9 +660,16 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
      *
      * 向从节点服务器提供数据。由于这是一个循环缓冲区，如果我们是跨区域的，我们必须将回复分为两部分。
      * */
+    // len = 真正要发出去的数据的长度
     len = server.repl_backlog_histlen - skip;
     serverLog(LL_DEBUG, "[PSYNC] Reply total length: %lld", len);
     while(len) {
+
+        // 跟写入的时候逻辑很像了，先看下从j到尾部的位置是不是足够发完了
+        // 足够发完：(server.repl_backlog_size - j) >= len
+        // 不够发完：(server.repl_backlog_size - j) < len
+
+        // 不管够不够，先发了，没发完的话，j指向开始的位置，然后根据剩余的 len 去发。
         long long thislen =
             ((server.repl_backlog_size - j) < len) ?
             (server.repl_backlog_size - j) : len;
@@ -662,6 +679,7 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
         len -= thislen;
         j = 0;
     }
+    // 发回发送的数据量的长度。
     return server.repl_backlog_histlen - skip;
 }
 
