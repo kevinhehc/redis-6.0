@@ -703,7 +703,7 @@ void clusterInit(void) {
  * 7) If the node was a slave, the whole data set is flushed away. 
  *
  * 重置执行软重置或硬重置的节点：
- * 1）忘记所有其他节点。
+ * 1） 忘记所有其他节点。
  * 2） 所有分配/打开的插槽都将释放。
  * 3） 如果节点是从节点，则它将变为主节点。
  * 4） 仅用于硬重置：生成一个新的节点ID。
@@ -944,8 +944,10 @@ unsigned long getClusterConnectionsCount(void) {
  * { and } is hashed. This may be useful in the future to force certain
  * keys to be in the same node (assuming no resharding is in progress). 
  *
- * 我们有16384个哈希槽。给定键的哈希槽被获得为该键的crc16的最低有效14位。但是，如果键包含｛…｝模式，
- * 则仅对｛和｝之间的部分进行哈希处理。这在将来可能有助于强制某些键位于同一节点中（假设没有进行重新分发）。
+ * 我们有16384个哈希槽。给定键的哈希槽被获得为该键的crc16的最低有效14位。
+ *
+ * 但是，如果键包含｛…｝模式，则仅对｛和｝之间的部分进行哈希处理。
+ * 这在将来可能有助于强制某些键位于同一节点中（假设没有进行重新分发）。
  * */
 unsigned int keyHashSlot(char *key, int keylen) {
     int s, e; /* start-end indexes of { and } 
@@ -1043,9 +1045,10 @@ clusterNode *createClusterNode(char *nodename, int flags) {
  * failure report from the same sender. 1 is returned if a new failure
  * report is created. 
  *
- * 每当我们从节点获得故障报告时，都会调用此函数。副作用是填充fail_reports列表（或更新现有报告的时间戳）
+ * 每当我们从 节点获得故障报告时，都会调用此函数。副作用是填充fail_reports列表（或更新现有报告的时间戳）
  *
  * failing是根据“sender”节点处于故障状态的节点。
+ *
  * 如果函数只是更新来自同一发件人的现有故障报告的时间戳，则返回0。如果创建了新的故障报告，则返回1。
  * */
 int clusterNodeAddFailureReport(clusterNode *failing, clusterNode *sender) {
@@ -1276,7 +1279,7 @@ int clusterAddNode(clusterNode *node) {
  * 从群集中删除节点。函数执行高级清理，调用freeClusterNode（）进行低
  * 级清理。在这里，我们执行以下操作：
  * 
- * 1）将其处理的所有插槽标记为未分配。
+ * 1） 将其处理的所有插槽标记为未分配。
  * 
  * 2） 删除此节点发送并被其他节点引用的所有故障报告。
  * 
@@ -1565,11 +1568,15 @@ void clusterHandleConfigEpochCollision(clusterNode *sender) {
  * the node ID as key, and the time when it is ok to re-add the node as
  * value.
  * 
- * CLUSTER节点黑名单节点黑名单只是确保具有给定节点ID的给定节点在经过一段时间之前
- * 不会被读取的一种方式（该时间在CLUSTER_blacklist_TTL中以秒为
- * 单位指定）。当我们想从集群中完全删除一个节点时，这很有用：当调用cluster FORGET时，
+ * CLUSTER节点黑名单
+ *
+ * 节点黑名单只是确保具有给定节点ID的给定节点在经过一段时间之前
+ * 不会被读取的一种方式（该时间在CLUSTER_blacklist_TTL中以秒为单位指定）。
+ *
+ * 当我们想从集群中完全删除一个节点时，这很有用：当调用cluster FORGET时，
  * 它还会将该节点放入黑名单，这样，即使我们收到来自其他节点的gossip消
  * 息，这些消息仍然记得我们要删除的节点，我们也不会在一段时间前重新添加它。
+ *
  * 目前，CLUSTER_BLACKLIST_TTL设置为1分钟，这意味着redis-trib有
  * 60秒的时间向集群中的节点发送CLUSTER FORGET消息，而不需要处理
  * 其他节点将节点重新添加回我们已经发送了FORGET命令的节点的问题，以及可以将节
@@ -1590,8 +1597,8 @@ void clusterHandleConfigEpochCollision(clusterNode *sender) {
  * node add/removal procedures, entries could accumulate. 
  *
  * 在addNode（）或Exists（）操作之前，我们总是从黑名单中删除过期的条目。
- * 这是一个O（N）操作，但这不是问题，因为添加/存在操作很少被调用，哈希表最多只
- * 包含很少的元素。但是，如果在长时间运行期间不进行清理，并且使用一些自动的节点添加/删除过程，条目可能会累积。
+ * 这是一个O（N）操作，但这不是问题，因为添加/存在操作很少被调用，哈希表最多只包含很少的元素。
+ * 但是，如果在长时间运行期间不进行清理，并且使用一些自动的节点添加/删除过程，条目可能会累积。
  * */
 void clusterBlacklistCleanup(void) {
     dictIterator *di;
@@ -1770,7 +1777,7 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
      *
      * 如果它是一个主节点和。。。
      * 1） FAIL状态已足够旧。
-     * 2） 从我们的角度来看，它仍然在提供空位（没有失败）。显然没有人会修复这些插槽，清除FAIL标志。
+     * 2） 从我们的角度来看，它仍然在提供槽位（没有失败转移）。显然没有人会修复这些插槽，清除FAIL标志。
      * */
     if (nodeIsMaster(node) && node->numslots > 0 &&
         (now - node->fail_time) >
@@ -2718,8 +2725,7 @@ int clusterProcessPacket(clusterLink *link) {
          * Note: this MUST happen after we update the master/slave state
          * so that CLUSTER_NODE_MASTER flag will be set. 
          *
-         * 更新我们提供的老虎机信息。注意：这必须在我们更新主/从状态之后发生，以便设置CL
-         * USTER_NODE_master标志。
+         * 更新我们服务的槽位信息。注意：这必须在我们更新主/从状态之后发生，以便设置 CLUSTER_NODE_MASTER 标志。
          * */
 
         /* Many checks are only needed if the set of served slots this
@@ -4040,12 +4046,12 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
  * get voted and replace a failing master. Slaves with better replication
  * offsets are more likely to win. 
  *
- * 此函数返回此节点（从节点）在其主从环上下文中的“秩”。从节点的级别由同一主机的其他
+ * 此函数返回此节点（从节点）在其主从环上下文中的“等级”。从节点的级别由同一主机的其他
  * 从节点的数量给定，这些从节点与本地主机相比具有更好的复制偏移量（更好意味着更大，因此
- * 它们要求更多的数据）。秩为0的从属服务器是具有最大（最新）复制偏移量的从属服务器,
- * 依此类推。请注意，由于秩是如何计算的，多个从设备可能具有相同的秩，以防它们具有
+ * 它们要求更多的数据）。等级为0的从节点是具有最大（最新）复制偏移量的从节点,
+ * 依此类推。请注意，由于等级是如何计算的，多个从设备可能具有相同的等级，以防它们具有
  * 相同的偏移。从节点等级用于增加开始选举的延迟，以便获得投票并替换失败的主节点。复制偏
- * 移量更好的从属服务器更有可能获胜。
+ * 移量更好的从节点更有可能获胜。
  * */
 int clusterGetSlaveRank(void) {
     long long myoffset;
@@ -4199,8 +4205,7 @@ void clusterFailoverReplaceYourMaster(void) {
     /* 4) Pong all the other nodes so that they can update the state
      *    accordingly and detect that we switched to master role. 
      *
-     * 4） Pong所有其他节点，以便它们可以相应地更新状态，并检测到我们切换到了ma
-     * ster角色。
+     * 4） Pong所有其他节点，以便它们可以相应地更新状态，并检测到我们切换到了master角色。
      * */
     clusterBroadcastPong(CLUSTER_BROADCAST_ALL);
 
@@ -4343,7 +4348,7 @@ void clusterHandleSlaveFailover(void) {
          * less updated replication offset, are penalized. 
          *
          * 我们添加了另一个与从属等级成比例的延迟。特别是1秒的排名。这样，更新复制偏移量可
-         * 能较少的从属服务器就会受到惩罚。
+         * 能较少的从节点就会受到惩罚。
          * */
         server.cluster->failover_auth_time +=
             server.cluster->failover_auth_rank * 1000;
@@ -4545,7 +4550,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
      *
      * 步骤3：确定迁移的候选者，并检查在ok slave数量最多的master中，我是
      * 否是节点ID最小的那个（“候选者slave”）。注意：这意味着最终会发生副本迁移，
-     * 因为可以再次访问的从属服务器总是会清除其FAIL标志，所以最终必须有一个候选者。
+     * 因为可以再次访问的从节点总是会清除其FAIL标志，所以最终必须有一个候选者。
      * 同时，这并不意味着不可能有种族条件（两个从节点同时迁移），但这不太可能发生，而且
      * 发生时是无害的。
      * */
@@ -4686,9 +4691,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * The function can be used both to initialize the manual failover state at
  * startup or to abort a manual failover in progress. 
  *
- * 重置手动故障切换状态。这对主设备和从设备都有效，因为手动故障转移的所有状态都已清
- * 除。该功能既可用于在启动时初始化手动故障转移状态，也可用于中止正在进行的手动故障
- * 转移。
+ * 重置手动故障切换状态。这对主设备和从设备都有效，因为手动故障转移的所有状态都已清除。
+ * 该功能既可用于在启动时初始化手动故障转移状态，也可用于中止正在进行的手动故障转移。
  * */
 void resetManualFailover(void) {
     if (server.cluster->mf_end && clientsArePaused()) {
@@ -4794,9 +4798,8 @@ void clusterCron(void) {
      * The option can be set at runtime via CONFIG SET, so we periodically check
      * if the option changed to reflect this into myself->ip. 
      *
-     * 我们想让自己->ip与集群公告ip选项同步。该选项可以在运行时通过CONFIG 
-     * set进行设置，因此我们定期检查该选项是否已更改以将其反映到myself->ip
-     * 中。
+     * 我们想让自己->ip与集群公告ip选项同步。该选项可以在运行时通过CONFIG  SET 进行设置，
+     * 因此我们定期检查该选项是否已更改以将其反映到 myself->ip 中。
      * */
     {
         static char *prev_ip = NULL;
@@ -4951,7 +4954,7 @@ void clusterCron(void) {
      * 3) Count the number of slaves for our master, if we are a slave. 
      *
      * 迭代节点以检查是否需要将某些内容标记为失败。此循环还负责：
-     * 1）检查是否存在孤立的主节点器（没有非故障从控器的主节点）。
+     * 1） 检查是否存在孤立的主节点器（没有非故障从控器的主节点）。
      * 2） 计算单个主设备的最大非故障从设备数量。
      * 3） 如果我们是从节点，请为主节点计算从节点的数量。
      * */
