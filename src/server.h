@@ -3528,7 +3528,7 @@ struct redisServer {
                                  * */
     /* Cluster 
      *
-     * 簇
+     * 集群
      * */
     int cluster_enabled;      /* Is cluster enabled? 
                                *

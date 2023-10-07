@@ -205,10 +205,10 @@ typedef struct clusterLink {
  *
  * clusterState todo_before_sleep标志。
  * */
-#define CLUSTER_TODO_HANDLE_FAILOVER (1<<0)
-#define CLUSTER_TODO_UPDATE_STATE (1<<1)
-#define CLUSTER_TODO_SAVE_CONFIG (1<<2)
-#define CLUSTER_TODO_FSYNC_CONFIG (1<<3)
+#define CLUSTER_TODO_HANDLE_FAILOVER (1<<0) // 处理故障转移
+#define CLUSTER_TODO_UPDATE_STATE (1<<1)    // 处理状态更新
+#define CLUSTER_TODO_SAVE_CONFIG (1<<2)     // 处理配置保存
+#define CLUSTER_TODO_FSYNC_CONFIG (1<<3)    // 处理配置刷盘
 
 /* Message types.
  *
@@ -344,7 +344,7 @@ typedef struct clusterNode {
                               * */
     mstime_t voted_time;     /* Last time we voted for a slave of this master 
                               *
-                              * 上次我们投票给这个主人的从节点
+                              * 上次我们投票给这个主节点的从节点
                               * */
     mstime_t repl_offset_time;  /* Unix time we received offset for this node 
                                  *
@@ -352,7 +352,7 @@ typedef struct clusterNode {
                                  * */
     mstime_t orphaned_time;     /* Starting time of orphaned master condition 
                                  *
-                                 * 孤立主条件的开始时间
+                                 * 称为孤儿主节点状态的开始时间
                                  * */
     long long repl_offset;      /* Last known repl offset for this node. 
                                  *
@@ -385,7 +385,7 @@ typedef struct clusterState {
                            *
                            * 此节点
                            * */
-    uint64_t currentEpoch;
+    uint64_t currentEpoch; // 当前的年代
     int state;            /* CLUSTER_OK, CLUSTER_FAIL, ... 
                            * */
     int size;             /* Num of master nodes with at least one slot 
@@ -441,7 +441,7 @@ typedef struct clusterState {
     mstime_t mf_end;            /* Manual failover time limit (ms unixtime).
                                    It is zero if there is no MF in progress. 
                                  *
-                                 * 手动故障转移时间限制（ms-unixtime）。如果没有正在进行的MF，则为零。
+                                 * 手动故障转移时间限制（ms-unixtime）。如果没有正在进行的手动故障转移，则为零。
                                  * */
     /* Manual failover state of master. 
      *
@@ -467,7 +467,7 @@ typedef struct clusterState {
                                  * */
     /* The following fields are used by masters to take state on elections. 
      *
-     * 以下字段由主节点用来进行州选举。
+     * 以下字段由主节点用来进行选举记录状态。
      * */
     uint64_t lastVoteEpoch;     /* Epoch of the last vote granted. 
                                  *

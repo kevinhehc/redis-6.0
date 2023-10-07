@@ -96,9 +96,11 @@ void moduleCallClusterReceivers(const char *sender_id, uint64_t module_id, uint8
  * sake of locking if it does not already exist), C_ERR is returned.
  * If the configuration was loaded from the file, C_OK is returned. 
  *
- * 从“filename”加载群集配置。如果文件不存在或长度为零（这可能是因为当我们
- * 锁定nodes.conf文件时，如果它不存在，我们会创建一个长度为零的文件来进行
- * 锁定），则返回C_ERR。如果配置是从文件加载的，则返回C_OK。
+ * 从“filename”加载群集配置。
+ *
+ * 如果文件不存在或长度为零（这可能是因为当我们锁定nodes.conf文件时，
+ * 如果它不存在，我们会创建一个长度为零的文件来进行锁定），则返回C_ERR。
+ * 如果配置是从文件加载的，则返回C_OK。
  * */
 int clusterLoadConfig(char *filename) {
     FILE *fp = fopen(filename,"r");
@@ -135,9 +137,11 @@ int clusterLoadConfig(char *filename) {
      *
      * To simplify we allocate 1024+CLUSTER_SLOTS*128 bytes per line. 
      *
-     * 分析文件。请注意，集群配置文件的单行可能非常长，因为它们包括节点的所有哈希槽。这
-     * 意味着在最坏的情况下，Redis插槽的一半将出现在一行中，可能处于导入或迁移状态，
-     * 因此与发送方/接收方的节点ID一起出现。为了简化，我们每行分配1024+CLUSTER_SLOTS*128个字节。
+     * 分析文件。请注意，集群配置文件的单行可能非常长，因为它们包括节点的所有哈希槽。
+     * 这意味着在最坏的情况下，Redis插槽的一半将出现在一行中，可能处于导入或迁移状态，
+     * 因此与发送方/接收方的节点ID一起出现。
+     *
+     * 为了简化，我们每行分配1024+CLUSTER_SLOTS*128个字节。
      * */
     maxline = 1024+CLUSTER_SLOTS*128;
     line = zmalloc(maxline);
@@ -151,7 +155,7 @@ int clusterLoadConfig(char *filename) {
          * editing nodes.conf or by the config writing process if stopped
          * before the truncate() call. 
          *
-         * 跳过空行，它们可以由用户手动编辑nodes.conf创建，也可以由配置写入过程创建（如果在truncate（）调用之前停止）。
+         * 跳过空行，它们可以由用户手动编辑nodes.conf创建，也可以由配置写入过程创建（ 如果在truncate() 调用之前停止 ）。
          * */
         if (line[0] == '\n' || line[0] == '\0') continue;
 
@@ -225,8 +229,8 @@ int clusterLoadConfig(char *filename) {
          * In this case we set it to the default offset of 10000 from the
          * base port. 
          *
-         * 在nodes.conf的旧版本中，缺少“@busport”部分。在这种情况下，我
-         * 们将其设置为从基本端口的默认偏移量10000。
+         * 在nodes.conf的旧版本中，缺少“@busport”部分。
+         * 在这种情况下，我们将其设置为从基本端口的默认偏移量10000。
          * */
         n->cport = busp ? atoi(busp) : n->port + CLUSTER_PORT_INCR;
 
@@ -369,8 +373,8 @@ int clusterLoadConfig(char *filename) {
      * the max epoch found in the nodes configuration. However we handle this
      * as some form of protection against manual editing of critical files. 
      *
-     * 不应该发生的事情：currentEpoch小于节点配置中的最大epoch。然而，
-     * 我们将其视为某种形式的保护，以防止对关键文件进行手动编辑。
+     * 不应该发生的事情：currentEpoch小于节点配置中的最大epoch。
+     * 然而，我们将其视为某种形式的保护，以防止对关键文件进行手动编辑。
      * */
     if (clusterGetMaxEpoch() > server.cluster->currentEpoch) {
         server.cluster->currentEpoch = clusterGetMaxEpoch();
@@ -398,11 +402,14 @@ fmterr:
  * bigger we pad our payload with newlines that are anyway ignored and truncate
  * the file afterward. 
  *
- * 群集节点配置与Cluster NODES输出完全相同。此函数写入节点配置并返回0，
- * 如果出现错误，则返回1。注意：从POSIX文件系统语义的角度来看，我们需要以原
- * 子方式写入文件，这样，如果服务器在写入过程中停止或崩溃，我们将以旧文件或新文件结
- * 束。由于我们有完整的可写负载，我们可以使用一次写入来写入整个文件。如果预先存在的
- * 文件更大，我们用换行符填充负载，这些换行符无论如何都会被忽略，然后截断文件。
+ * 群集节点配置与Cluster NODES输出完全相同。
+ *
+ * 此函数写入节点配置并返回0，如果出现错误，则返回1。
+ *
+ * 注意：从POSIX文件系统语义的角度来看，我们需要以原子方式写入文件，
+ * 这样，如果服务器在写入过程中停止或崩溃，我们将以旧文件或新文件结束。
+ * 由于我们有完整的可写负载，我们可以使用一次写入来写入整个文件。
+ * 如果预先存在的文件更大，我们用换行符填充负载，这些换行符无论如何都会被忽略，然后截断文件。
  * */
 int clusterSaveConfig(int do_fsync) {
     sds ci;
@@ -410,6 +417,7 @@ int clusterSaveConfig(int do_fsync) {
     struct stat sb;
     int fd;
 
+    // todo_before_sleep 的状态 去除 CLUSTER_TODO_SAVE_CONFIG，因为是与 反。
     server.cluster->todo_before_sleep &= ~CLUSTER_TODO_SAVE_CONFIG;
 
     /* Get the nodes description and concatenate our "vars" directive to
@@ -438,6 +446,7 @@ int clusterSaveConfig(int do_fsync) {
     }
     if (write(fd,ci,sdslen(ci)) != (ssize_t)sdslen(ci)) goto err;
     if (do_fsync) {
+        // 如果立刻刷盘，那就在取消刷盘的任务
         server.cluster->todo_before_sleep &= ~CLUSTER_TODO_FSYNC_CONFIG;
         fsync(fd);
     }
@@ -480,9 +489,11 @@ void clusterSaveConfigOrDie(int do_fsync) {
  * On success C_OK is returned, otherwise an error is logged and
  * the function returns C_ERR to signal a lock was not acquired. 
  *
- * 使用flock（）锁定集群配置，并泄漏用于获取锁的文件描述符，这样文件将永远被锁
- * 定。这是因为我们总是用新版本更新nodes.conf，重新打开文件，并在适当的位
- * 置写入（稍后用ftruncate（）调整长度）。成功时返回C_OK，否则记录错误，函数返回C_ERR以表示未获取锁。
+ * 使用flock（）锁定集群配置，并泄漏用于获取锁的文件描述符，这样文件将永远被锁定。
+ *
+ * 这是因为我们总是用新版本更新nodes.conf，重新打开文件，并在适当的位置写入（稍后用ftruncate（）调整长度）。
+ *
+ * 成功时返回C_OK，否则记录错误，函数返回C_ERR以表示未获取锁。
  * */
 int clusterLockConfig(char *filename) {
 /* flock() does not exist on Solaris
