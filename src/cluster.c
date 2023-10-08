@@ -3463,9 +3463,8 @@ void clusterSendPing(clusterLink *link, int type) {
      * message to). However practically there may be less valid nodes since
      * nodes in handshake state, disconnected, are not considered. 
      *
-     * freshnodes是我们希望附加的最大节点数：可用节点减去两个（我们自己和我们
-     * 发送消息的节点）。然而，实际上可能存在无效节点，因为不考虑处于握手状态、断开连接
-     * 的节点。
+     * freshnodes是我们希望附加的最大节点数：可用节点减去两个（我们自己和我们发送消息的节点）。
+     * 然而，实际上可能存在无效节点，因为不考虑处于握手状态、断开连接的节点。
      * */
     int freshnodes = dictSize(server.cluster->nodes)-2;
 
@@ -3497,17 +3496,19 @@ void clusterSendPing(clusterLink *link, int type) {
      * 10% of the total nodes we have. 
      *
      * 我们想增加多少gossip板块？节点数量的1/10，并且无论如何至少为3。为什么是1/10？
+     *
+     *
      * 如果我们有N个主节点，具有N/10个条目，并且我们认为在node_timeout中，
-     * 我们与每个其他节点交换至少4个数据包（在最坏的情况下，我们在node_ttimeout/2时间内进行ping，
-     * 并且我们还从主节点接收两次ping），那么在
-     * node_timeout*2故障报告有效时间内，我们总共有8个数据包。因此，对于
-     * 单个PFAIL节点，我们可以预期（在指定的时间窗口内）收到以下数量的故障报告：
-     * PROB GOSSIP_ENTRIES_PER_PACKET TOTAL_PACKETS:PROB=在单个gossip条目中出现的概率，即1/NUM_of_NODES。
-     * 条目=10。TOTAL_PACKETS＝2 4 NUM_OF_MASTERS。如果
-     * 我们假设我们只有主节点（因此节点数量和主节点数量相同），在1/10的情况下，我们
-     * 总是超过大多数，特别是节点数量的80%，以解释许多主节点同时失败的原因。由于我们
-     * 有无投票权的从节点，它降低了条目以我们的节点为特征的概率，因此我们将每个数据包的
-     * 条目数量设置为我们拥有的节点总数的10%。
+     * 我们与每个其他节点交换至少4个数据包
+     * （在最坏的情况下，我们在node_ttimeout/2时间内进行ping，并且我们还从主节点接收两次ping），
+     * 那么在node_timeout*2故障报告有效时间内，我们总共有8个数据包。
+     * 因此，对于单个PFAIL节点，我们可以预期（在指定的时间窗口内）收到以下数量的故障报告：
+     * PROB GOSSIP_ENTRIES_PER_PACKET TOTAL_PACKETS:PROB=在单个gossip条目中出现的概率，
+     * 即1/NUM_of_NODES。条目=10。TOTAL_PACKETS＝2 4 NUM_OF_MASTERS。
+     * 如果我们假设我们只有主节点（因此节点数量和主节点数量相同），在1/10的情况下，
+     * 我们总是超过大多数，特别是节点数量的80%，以解释许多主节点同时失败的原因。
+     * 由于我们有无投票权的从节点，它降低了条目以我们的节点为特征的概率，
+     * 因此我们将每个数据包的条目数量设置为我们拥有的节点总数的10%。
      * */
     wanted = floor(dictSize(server.cluster->nodes)/10);
     if (wanted < 3) wanted = 3;
@@ -3575,7 +3576,7 @@ void clusterSendPing(clusterLink *link, int type) {
          
          *
          * 在gossip部分中，不要包括：
-         * 1）处于HANDSHAKE状态的节点。
+         * 1） 处于HANDSHAKE状态的节点。
          * 3） 设置了NOADDR标志的节点。
          * 4） 如果节点没有配置插槽，则断开连接。
          * */
