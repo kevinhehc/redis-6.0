@@ -631,17 +631,10 @@ long long addReplyReplicationBacklog(client *c, long long offset) {
      * */
 
     // j 指向 将要发送出去的数据的开始位置，相对位置。 repl_backlog_off 是绝对位置
-    // 下面详细讲解j如何求值的：
-    //    「server.repl_backlog_idx」是肯定大于 0 的
-    //    「server.repl_backlog_histlen」也是肯定大于 0 的
-    //     原式子 ：  j = (server.repl_backlog_idx + (server.repl_backlog_size-server.repl_backlog_histlen)) % server.repl_backlog_size;
-    //     ------>  j = ((server.repl_backlog_idx -server.repl_backlog_histlen) + server.repl_backlog_size ) % server.repl_backlog_size;
-    //     ------>     因为是取模，所以 （+ server.repl_backlog_size） 去掉
-    //     ------>   j = (server.repl_backlog_idx - server.repl_backlog_histlen) % server.repl_backlog_size;
-    //     ------>   j =  server.repl_backlog_idx - server.repl_backlog_histlen
 
-    // 然后不太理解为什么作者写成下面的样子，看着头晕，也没想明白，但是结果是一样的
-
+    // 缓冲区的空白区长度 =  server.repl_backlog_size-server.repl_backlog_histlen
+    // 如果是发送的数据没大于一圈，那么 「 缓冲区的空白区长度 +  将要发送出去的数据的结束位置repl_backlog_idx 」 =  0
+    // 如果是发送的数据大于一圈，那么 「 缓冲区的空白区长度=0  +  将要发送出去的数据的结束位置repl_backlog_idx 」 =  repl_backlog_idx
     j = (server.repl_backlog_idx +
         (server.repl_backlog_size-server.repl_backlog_histlen)) %
         server.repl_backlog_size;

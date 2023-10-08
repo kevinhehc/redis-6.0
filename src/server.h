@@ -3236,7 +3236,7 @@ struct redisServer {
     // 环形缓冲复制缓冲区的大小
     long long repl_backlog_size;        /* 积压工作循环缓冲区大小,默认1M --- Backlog circular buffer size */
     
-    // 其实就是真正需要发送的同步数据长度 = 总数据 - 已经发送的数据 = 也可以理解为「环形缓冲复制缓冲区已用大小」，因为是环形的
+    // 其实就是真正需要发送的同步数据长度 = 总数据 - 空白区的长度 = 也可以理解为「环形缓冲复制缓冲区已用大小」，因为是环形的
     long long repl_backlog_histlen;     /* 积压实际数据长度 ---- Backlog actual data length */
     
     // 将要发送出去的数据的结束位置，相对位置
