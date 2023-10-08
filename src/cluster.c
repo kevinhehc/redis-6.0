@@ -1088,9 +1088,10 @@ int clusterNodeAddFailureReport(clusterNode *failing, clusterNode *sender) {
  * older than the global node timeout, so we don't just trust the number
  * of failure reports from other nodes. 
  *
- * 删除太旧的故障报告，其中太旧意味着合理地早于全局节点超时。请注意，无论如何，要将
- * 节点标记为FAIL，我们需要具有至少早于全局节点超时的本地PFAIL状态，因此我
- * 们不只是信任来自其他节点的故障报告数量。
+ * 删除太旧的故障报告，其中太旧意味着合理地早于全局节点超时。
+ *
+ * 请注意，无论如何，要将节点标记为FAIL，我们需要具有至少早于全局节点超时的本地PFAIL状态，
+ * 因此我们不只是信任来自其他节点的故障报告数量。
  * */
 void clusterNodeCleanupFailureReports(clusterNode *node) {
     list *l = node->fail_reports;
@@ -1748,8 +1749,10 @@ void markNodeAsFailingIfNeeded(clusterNode *node) {
  * to reach it again. It checks if there are the conditions to undo the FAIL
  * state. 
  *
- * 只有当节点被标记为FAIL时，才会调用此函数，但我们可以再次访问它。它检查是否存
- * 在撤消FAIL状态的条件。
+ * 只有当节点被标记为FAIL时，才会调用此函数，但我们可以再次访问它。
+ * 它检查是否存在撤消FAIL状态的条件。
+ *
+ * 收到了这个节点的pong消息才会调用这个方法
  * */
 void clearNodeFailureIfNeeded(clusterNode *node) {
     mstime_t now = mstime();
@@ -1795,8 +1798,8 @@ void clearNodeFailureIfNeeded(clusterNode *node) {
  * specified ip address and port number. This function is used in order to
  * avoid adding a new handshake node for the same address multiple times. 
  *
- * 如果已经有一个处于HANDSHAKE状态的节点与指定的ip地址和端口号匹配，则返
- * 回true。使用此函数是为了避免多次为同一地址添加新的握手节点。
+ * 如果已经有一个处于HANDSHAKE状态的节点与指定的ip地址和端口号匹配，则返回true。
+ * 使用此函数是为了避免多次为同一地址添加新的握手节点。
  * */
 int clusterHandshakeInProgress(char *ip, int port, int cport) {
     dictIterator *di;
@@ -1823,8 +1826,10 @@ int clusterHandshakeInProgress(char *ip, int port, int cport) {
  * EAGAIN - There is already a handshake in progress for this address.
  * EINVAL - IP or port are not valid. 
  *
- * 如果没有正在进行的握手，请使用指定的地址开始握手。如果握手实际上已启动，则返回非
- * 零。返回On error zero，并将errno设置为以下值之一：
+ * 如果没有正在进行的握手，请使用指定的地址开始握手。
+ * 如果握手实际上已启动，则返回非零。
+ *
+ * 返回On error zero，并将errno设置为以下值之一：
  * EAGAIN-此地址已在进行握手。
  * EINVAL-IP或端口无效。
  * */
@@ -1898,8 +1903,8 @@ int clusterStartHandshake(char *ip, int port, int cport) {
  * by the caller, not in the content of the gossip section, but in the
  * length. 
  *
- * 处理PING或PONG数据包的gossip部分。请注意，此函数假设调用方已经检查了数据包
- * 的健全性，而不是gossip部分的内容，而是长度。
+ * 处理PING或PONG数据包的gossip部分。
+ * 请注意，此函数假设调用方已经检查了数据包的健全性，而不是gossip部分的内容，而是长度。
  * */
 void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
     uint16_t count = ntohs(hdr->count);
@@ -1956,7 +1961,7 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
              * one we see from the other nodes. 
              *
              * 如果从我们的POV来看，节点已启动（未设置故障标志），则我们没有该节点的挂起ping，
-             * 也没有该节点上的故障报告，请使用我们从其他节点看到的时间更新最后一次乒乓时间。
+             * 也没有该节点上的故障报告，请使用我们从其他节点看到的时间更新最后一次PONG时间。
              * */
             if (!(flags & (CLUSTER_NODE_FAIL|CLUSTER_NODE_PFAIL)) &&
                 node->ping_sent == 0 &&
@@ -2017,11 +2022,12 @@ void clusterProcessGossipSection(clusterMsg *hdr, clusterLink *link) {
              * is a well known node in our cluster, otherwise we risk
              * joining another cluster. 
              *
-             * 如果它不处于NOADDR状态，并且我们没有它，我们会将它添加到具有确切nodeid
-             * 和标志的可信dict中。请注意，我们不能简单地针对这个IP/PORT对启动握手，
-             * 因为IP/PORT已经可以重用了，否则我们就有加入另一个集群的风险。请注意，我
-             * 们要求这个gossip消息的发送者是我们集群中的一个众所周知的节点，否则我们就有加入另一
-             * 个集群的风险。
+             * 如果它不处于NOADDR状态，并且我们没有它，我们会将它添加到具有确切nodeid和标志的可信dict中。
+             * 请注意，我们不能简单地针对这个IP/PORT对启动握手，因为IP/PORT已经可以重用了，
+             * 否则我们就有加入另一个集群的风险。
+             *
+             * 请注意，我们要求这个gossip消息的发送者是我们集群中的一个众所周知的节点，
+             * 否则我们就有加入另一个集群的风险。
              * */
             if (sender &&
                 !(flags & CLUSTER_NODE_NOADDR) &&
@@ -2076,8 +2082,13 @@ void nodeIp2String(char *buf, clusterLink *link, char *announced_ip) {
  * otherwise 1 is returned. 
  *
  * 将节点地址更新为可以从link->fd中提取的IP地址，或者如果hdr->myip不为空，则更新为节点通知我们的地址。
- * 端口也取自数据包标头。如果地址或端口发生更改，请断开节点链接，以便我们再次连接到新地址。
- * 如果ip/端口对已经正确，则根本不执行任何操作。如果节点地址仍然相同，则函数返回0，否则返回1。
+ * 端口也取自数据包标头。
+ *
+ * 如果地址或端口发生更改，请断开节点链接，以便我们再次连接到新地址。
+ *
+ * 如果ip/端口对已经正确，则根本不执行任何操作。
+ *
+ * 如果节点地址仍然相同，则函数返回0，否则返回1。
  * */
 int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
                               clusterMsg *hdr)
@@ -2093,9 +2104,10 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
      * As a side effect this function never frees the passed 'link', so
      * it is safe to call during packet processing. 
      *
-     * 如果链接与发送方链接相同，我们不会继续，因为此函数旨在查看节点链接是否与用于从节
-     * 点接收PING的对称链接一致。作为副作用，此函数永远不会释放传递的“链接”，因此
-     * 在数据包处理过程中调用是安全的。
+     * 如果链接与发送方链接相同，我们不会继续，
+     * 因为此函数旨在查看节点链接是否与用于从节点接收PING的对称链接一致。
+     *
+     * 作为副作用，此函数永远不会释放传递的“链接”，因此在数据包处理过程中调用是安全的。
      * */
     if (link == node->link) return 0;
 
@@ -2163,12 +2175,15 @@ void clusterSetNodeAsMaster(clusterNode *n) {
  * Sometimes it is not actually the "Sender" of the information, like in the
  * case we receive the info via an UPDATE packet. 
  *
- * 当我们通过PING、PONG或UPDATE数据包接收到主配置时，会调用此函数。我
- * 们收到的是一个节点，该节点的configEpoch，以及在该configEpoch下声明的插槽集。
- * 我们所做的是用与本地配置相比更新的配置重新绑定插槽，如果需要，
- * 我们将自己变成节点的副本（更多信息请参阅功能注释）。“sender”是我们收到配
- * 置更新的节点。有时它实际上不是信息的“发送者”，比如我们通过UPDATE数据包接
- * 收信息的情况。
+ * 当我们通过PING、PONG或UPDATE数据包接收到主配置时，会调用此函数。
+ * 我们收到的是一个节点，该节点的configEpoch，以及在该configEpoch下声明的插槽集。
+ *
+ *
+ * 我们所做的是用与本地配置相比更新的配置重新绑定插槽，
+ * 如果需要，我们将自己变成节点的副本（更多信息请参阅功能注释）。
+ *
+ * 'sender' 是我们收到配置更新的节点。有时它实际上不是信息的“发送者”，
+ * 比如我们通过UPDATE数据包接收信息的情况。
  * */
 void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoch, unsigned char *slots) {
     int j;
@@ -2181,9 +2196,11 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
      * case we'll resync with the master updating the whole key space), we
      * need to delete all the keys in the slots we lost ownership. 
      *
-     * 脏插槽列表是一个插槽列表，我们失去了这些插槽的所有权，但里面仍然有键。这种情况
-     * 通常发生在故障切换之后或管理员手动重新配置集群之后。如果更新消息无法将master
-     * 降级为slave（在这种情况下，我们将与master重新同步，更新整个键空间），我们需要删除我们失去所有权的插槽中的所有键。
+     * 脏插槽列表是一个插槽列表，我们失去了这些插槽的所有权，但里面仍然有键。
+     * 这种情况通常发生在故障切换之后或管理员手动重新配置集群之后。
+     *
+     * 如果更新消息无法将master降级为slave（在这种情况下，我们将与master重新同步，更新整个键空间），
+     * 我们需要删除我们失去所有权的插槽中的所有键。
      * */
     uint16_t dirty_slots[CLUSTER_SLOTS];
     int dirty_slots_count = 0;
@@ -2260,8 +2277,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
      * in the state of the server if a module disabled Redis Cluster
      * keys redirections. 
      *
-     * 更新插槽配置后，如果某个模块禁用了Redis Cluster键重定向，则不要对
-     * 服务器的状态进行任何实际更改。
+     * 更新插槽配置后，如果某个模块禁用了Redis Cluster键重定向，则不要对服务器的状态进行任何实际更改。
      * */
     if (server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_REDIRECTION)
         return;
@@ -2274,9 +2290,10 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
      * 2) We are a slave and our master is left without slots. We need
      *    to replicate to the new slots owner. 
      *
-     * 如果至少有一个插槽从一个节点重新分配到另一个具有更大configEpoch的节点
-     * ，则可能：
-     * 1）我们是一个没有插槽的主节点。这意味着我们被失败了，我们应该变成新主节点的复制品。
+     * 如果至少有一个插槽从一个节点重新分配到另一个具有更大configEpoch的节点，则可能：
+     *
+     * 1 ）我们是一个没有插槽的主节点。这意味着我们被失败了，我们应该变成新主节点的复制品。
+     *
      * 2） 我们是从节点，我们的主节点没有空位。我们需要复制到新的插槽所有者。
      * */
     if (newmaster && curmaster->numslots == 0) {
@@ -2296,9 +2313,11 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
          * In order to maintain a consistent state between keys and slots
          * we need to remove all the keys from the slots we lost. 
          *
-         * 如果我们在这里，我们收到了一条更新消息，该消息删除了我们仍有键的某些插槽的所有
-         * 权，但我们仍在为一些插槽提供服务，因此该主节点没有降级为从节点。为了保持键和
-         * 插槽之间的一致状态，我们需要从丢失的插槽中删除所有键。
+         * 如果我们在这里，我们收到了一条更新消息，
+         * 该消息删除了我们仍有键的某些插槽的所有权，
+         * 但我们仍在为一些插槽提供服务，因此该主节点没有降级为从节点。
+         *
+         * 为了保持键和插槽之间的一致状态，我们需要从丢失的插槽中删除所有键。
          * */
         for (j = 0; j < dirty_slots_count; j++)
             delKeysInSlot(dirty_slots[j]);
@@ -2315,10 +2334,13 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
  * processing lead to some inconsistency error (for instance a PONG
  * received from the wrong sender ID). 
  *
- * 当调用此函数时，将从node->rcvbuf开始处理一个数据包。释放缓冲区取决于
- * 调用方，因此该函数应该只处理处理数据包的更高级别的事务，并在需要时修改集群状态。
- * 如果数据包处理后链路仍然有效，则函数返回1，否则，如果由于数据包处理导致某些不一
- * 致错误（例如从错误的发送方ID接收到的PONG）而释放了链路，则返回0。
+ * 当调用此函数时，将从node->rcvbuf开始处理一个数据包。
+ * 释放缓冲区取决于调用方，因此该函数应该只处理处理数据包的更高级别的事务，
+ * 并在需要时修改集群状态。
+ *
+ * 如果数据包处理后链路仍然有效，则函数返回1，
+ * 否则，如果由于数据包处理导致某些不一致错误
+ * （例如从错误的发送方ID接收到的PONG）而释放了链路，则返回0。
  * */
 int clusterProcessPacket(clusterLink *link) {
     clusterMsg *hdr = (clusterMsg*) link->rcvbuf;
@@ -2353,6 +2375,7 @@ int clusterProcessPacket(clusterLink *link) {
     uint64_t senderCurrentEpoch = 0, senderConfigEpoch = 0;
     clusterNode *sender;
 
+    // 根据消息的类型，判断长度是否合法 start
     if (type == CLUSTERMSG_TYPE_PING || type == CLUSTERMSG_TYPE_PONG ||
         type == CLUSTERMSG_TYPE_MEET)
     {
@@ -2397,13 +2420,15 @@ int clusterProcessPacket(clusterLink *link) {
                 3 + ntohl(hdr->data.module.msg.len);
         if (totlen != explen) return 1;
     }
+    // 根据消息的类型，判断长度是否合法 end
+
 
     /* Check if the sender is a known node. Note that for incoming connections
      * we don't store link->node information, but resolve the node by the
      * ID in the header each time in the current implementation. 
      *
-     * 检查发件人是否为已知节点。请注意，对于传入连接，我们不存储link->node信
-     * 息，而是在当前实现中每次通过标头中的ID解析节点。
+     * 检查发件人是否为已知节点。请注意，对于传入连接，我们不存储link->node信息，
+     * 而是在当前实现中每次通过标头中的ID解析节点。
      * */
     sender = clusterLookupNode(hdr->sender);
 
@@ -2479,12 +2504,15 @@ int clusterProcessPacket(clusterLink *link) {
          * even with a normal PING packet. If it's wrong it will be fixed
          * by MEET later. 
          *
-         * 我们使用传入的MEET消息来设置“我自己”的地址，因为只有其他集群节点会在握手时
-         * 向我们发送MEET消息，当集群加入时，或者稍后如果我们更改了地址，这些节点会使用
-         * 我们的官方地址连接到我们。因此，从套接字中获取这个地址是一种简单的方法，可以在集
-         * 群中发现/更新我们自己的地址，而无需在配置中对其进行硬编码。然而，如果我们根本没
-         * 有地址，即使使用普通的PING数据包，我们也会更新地址。如果它是错误的，它将由M
-         * EET稍后修复。
+         * 我们使用传入的MEET消息来设置 myself 的地址，因为只有其他集群节点会在握手时
+         * 向我们发送MEET消息，当集群加入时，或者稍后如果我们更改了地址，
+         * 这些节点会使用我们的官方地址连接到我们。
+         *
+         * 因此，从套接字中获取这个地址是一种简单的方法，可以在集群中发现/更新我们自己的地址，
+         * 而无需在配置中对其进行硬编码。
+         *
+         * 然而，如果我们根本没有地址，即使使用普通的PING数据包，我们也会更新地址。
+         * 如果它是错误的，它将由MEET稍后修复。
          * */
         if ((type == CLUSTERMSG_TYPE_MEET || myself->ip[0] == '\0') &&
             server.cluster_announce_ip == NULL)
@@ -2506,8 +2534,9 @@ int clusterProcessPacket(clusterLink *link) {
          * flags, slaveof pointer, and so forth, as this details will be
          * resolved when we'll receive PONGs from the node. 
          *
-         * 如果这个节点对我们来说是新的，并且消息类型是MEET，请添加它。在这个阶段，我们
-         * 不尝试添加具有正确标志、slave-of指针等的节点，因为当我们从节点接收PONG时，这些细节将得到解决。
+         * 如果这个节点对我们来说是新的，并且消息类型是MEET，请添加它。
+         * 在这个阶段，我们不尝试添加具有正确标志、slave-of指针等的节点，
+         * 因为当我们从节点接收PONG时，这些细节将得到解决。
          * */
         if (!sender && type == CLUSTERMSG_TYPE_MEET) {
             clusterNode *node;
@@ -2524,8 +2553,8 @@ int clusterProcessPacket(clusterLink *link) {
          * the gossip section here since we have to trust the sender because
          * of the message type. 
          *
-         * 如果这是来自未知节点的MEET数据包，我们仍然在这里处理gossip部分，因为由于消息类
-         * 型的原因，我们必须信任发送者。
+         * 如果这是来自未知节点的MEET数据包，我们仍然在这里处理gossip部分，
+         * 因为由于消息类型的原因，我们必须信任发送者。
          * */
         if (!sender && type == CLUSTERMSG_TYPE_MEET)
             clusterProcessGossipSection(hdr,link);
@@ -2613,9 +2642,9 @@ int clusterProcessPacket(clusterLink *link) {
          * delay of each slave in the voting process, needs to know
          * what are the instances really competing. 
          *
-         * 复制发件人声明的CLUSTER_NODE_NOFAILOVER标志。这是我们从发
-         * 件人处收到的动态标志，并且最新状态必须是可信的。我们需要传播它，因为用于了解每个
-         * 从节点在投票过程中的延迟的从节点排名需要知道真正竞争的节点是什么。
+         * 复制发件人声明的 CLUSTER_NODE_NOFAILOVER 标志。
+         * 这是我们从发件人处收到的动态标志，并且最新状态必须是可信的。
+         * 我们需要传播它，因为用于了解每个从节点在投票过程中的延迟的从节点排名需要知道真正竞争的节点是什么。
          * */
         if (sender) {
             int nofailover = flags & CLUSTER_NODE_NOFAILOVER;
@@ -2781,14 +2810,21 @@ int clusterProcessPacket(clusterLink *link) {
          * do it. In this way A will stop to act as a master (or can try to
          * failover if there are the conditions to win the election). 
          *
-         * 2） 我们还检查了相反的条件，即发送方声称为我们知道由具有更大configEpo
-         * ch的主节点提供服务的插槽提供服务。如果发生这种情况，我们会通知发件人。这很有用，
-         * 因为有时在分区修复后，重新出现的主节点可能是最后一个声明给定哈希槽集的主节点，但其他
-         * 节点知道其配置不推荐使用。示例：对于插槽1、2、3，A和B是主插槽和从插槽。A被
-         * 瓜分了，B升职了。B被分区，A返回可用。通常，B会PING A发布其服务插槽集和
-         * configEpoch，但由于分区的原因，B无法通知A新的配置，因此具有更新表的
-         * 其他节点必须这样做。这样，A将停止充当主节点（或者，如果有条件赢得选举，可以尝试故
-         * 障转移）。
+         * 2）
+         * 我们还检查了相反的条件，
+         * 即发送方声称为我们知道由具有更大configEpoch的主节点提供服务的插槽提供服务。
+         * 如果发生这种情况，我们会通知发件人。
+         * 这很有用，因为有时在分区修复后，重新出现的主节点可能是最后一个声明给定哈希槽集的主节点，
+         * 但其他节点知道其配置不推荐使用。
+         *
+         * 示例：
+         * 对于插槽1、2、3，A和B是主插槽和从插槽。
+         * A被瓜分了，B升职了。
+         * B被分区，A返回可用。
+         *
+         * 通常，B会PING A发布其服务插槽集和configEpoch，
+         * 但由于分区的原因，B无法通知A新的配置，因此具有更新表的其他节点必须这样做。
+         * 这样，A将停止充当主节点（或者，如果有条件赢得选举，可以尝试故障转移）。
          * */
         if (sender && dirty_slots) {
             int j;
@@ -3104,8 +3140,8 @@ void clusterLinkConnectHandler(connection *conn) {
  * full length of the packet. When a whole packet is in memory this function
  * will call the function to process the packet. And so forth. 
  *
- * 读取数据。尝试先读取标头的第一个字段，以检查数据包的完整长度。当整个数据包在内存
- * 中时，此函数将调用函数来处理数据包。等等
+ * 读取数据。尝试先读取标头的第一个字段，以检查数据包的完整长度。
+ * 当整个数据包在内存中时，此函数将调用函数来处理数据包。等等
  * */
 void clusterReadHandler(connection *conn) {
     clusterMsg buf[1];
@@ -5564,15 +5600,19 @@ void clusterUpdateState(void) {
  * about desynchronizations between the data we have in memory and the
  * cluster configuration. 
  *
- * 该函数在节点启动后调用，以验证从磁盘加载的数据是否与群集配置一致：1）如果我们找
- * 到了我们不负责的哈希槽的键，则会发生以下情况：A）如果根据当前群集配置，没有其
- * 他节点负责，则将这些槽添加到我们的节点中。B） 如果根据我们的配置，其他节点已经
- * 负责这个插槽，我们从我们的角度将插槽设置为IMPORTING，以证明我们有这些插
- * 槽，并使redis-trib意识到这个问题，以便它可以尝试修复它。2）如果我们在
- * 不同于DB0的数据库中发现数据，我们会返回C_ERR，以向调用方发出信号，表明它
- * 应该退出服务器并返回错误消息或采取其他操作。函数始终返回C_OK，即使它将尝试更
- * 正“1”中描述的错误。但是，如果在不同于DB0的数据库中发现数据，则返回C_ERR。
- * 该函数还使用日志记录功能来警告用户内存中的数据与集群配置之间的不同步。
+ * 该函数在节点启动后调用，以验证从磁盘加载的数据是否与群集配置一致：
+ *
+ * 1）如果我们找到了我们不负责的哈希槽的键，则会发生以下情况：
+ *    A）如果根据当前群集配置，没有其他节点负责，则将这些槽添加到我们的节点中。
+ *    B）如果根据我们的配置，其他节点已经负责这个插槽，我们从我们的角度将插槽设置为IMPORTING，
+ *    以证明我们有这些插槽，并使redis-trib意识到这个问题，以便它可以尝试修复它。
+ *
+ * 2）如果我们在不同于DB0的数据库中发现数据，我们会返回C_ERR，以向调用方发出信号，
+ *    表明它应该退出服务器并返回错误消息或采取其他操作。
+ *
+ *   函数始终返回C_OK，即使它将尝试更正“1”中描述的错误。但是，如果在不同于DB0的数据库中发现数据，则返回C_ERR。
+ *
+ *   该函数还使用日志记录功能来警告用户内存中的数据与集群配置之间的不同步。
  * */
 int verifyClusterConfigWithData(void) {
     int j;
@@ -5658,7 +5698,7 @@ int verifyClusterConfigWithData(void) {
 /* Set the specified node 'n' as master for this node.
  * If this node is currently a master, it is turned into a slave. 
  *
- * 将指定的节点“n”设置为此节点的主节点。如果此节点当前是主节点，则它将变为从属节点。
+ * 将指定的节点 n 设置为此节点的主节点。如果 myself 是主节点，则它将变为从属节点。
  * */
 void clusterSetMaster(clusterNode *n) {
     serverAssert(n != myself);
@@ -5702,7 +5742,7 @@ static struct redisNodeFlags redisNodeFlagsTable[] = {
 /* Concatenate the comma separated list of node flags to the given SDS
  * string 'ci'. 
  *
- * 将以逗号分隔的节点标志列表连接到给定的SDS字符串“ci”。
+ * 将 flags 转为 redisNodeFlags 中指定的文字，用逗号隔开串起来返回，如果啥都没就返回 noflags
  * */
 sds representClusterNodeFlags(sds ci, uint16_t flags) {
     size_t orig_len = sdslen(ci);
@@ -5728,9 +5768,9 @@ sds representClusterNodeFlags(sds ci, uint16_t flags) {
  *
  * The function returns the string representation as an SDS string. 
  *
- * 生成指定群集节点的类似csv的表示形式。有关详细信息，请参阅clusterGen
- * NodesDescription（）顶部注释。函数以SDS字符串的形式返回字符串
- * 表示。
+ * 生成指定群集节点的类似csv的表示形式。
+ * 有关详细信息，请参阅clusterGenNodesDescription（）顶部注释。
+ * 函数以SDS字符串的形式返回字符串表示。
  * */
 sds clusterGenNodeDescription(clusterNode *node) {
     int j, start;
@@ -5833,11 +5873,12 @@ sds clusterGenNodeDescription(clusterNode *node) {
  * of the CLUSTER NODES function, and as format for the cluster
  * configuration file (nodes.conf) for a given node. 
  *
- * 生成我们知道的节点的类似csv的表示，包括“我自己”节点，并返回包含该表示的SDS
- * 字符串（由调用方释放）。与“filter”中指定的至少一个节点标志匹配的所有节
- * 点都将从输出中排除，因此使用零作为过滤器将包括表示中的所有已知节点，包括处于HANDSHAKE
- * 状态的节点。使用此函数获得的表示用于CLUSTER NODES函数
- * 的输出，并作为给定节点的集群配置文件（NODES.conf）的格式。
+ * 生成我们知道的节点的类似csv的表示，包括 "myself" 节点，并返回包含该表示的SDS字符串（由调用方释放）。
+ *
+ * 与“filter”中指定的至少一个节点标志匹配的所有节点都将从输出中排除，
+ * 因此使用零作为过滤器将包括表示中的所有已知节点，包括处于HANDSHAKE状态的节点。
+ *
+ * 使用此函数获得的表示用于CLUSTER NODES函数的输出，并作为给定节点的集群配置文件（NODES.conf）的格式。
  * */
 sds clusterGenNodesDescription(int filter) {
     sds ci = sdsempty(), ni;
@@ -6624,8 +6665,8 @@ NULL
          *
          * CLUSTER SET-CONFIG-EPOCH＜EPOCH＞只有当一个节点完全
          * 新鲜时，才允许用户设置配置EPOCH：没有配置EPOCH，没有其他已知节点，等等。
-         * 这发生在集群创建时，从每个节点都有不同节点ID的集群开始，而不必依赖冲突解决系
-         * 统，因为在创建大型集群时，冲突解决系统太慢。
+         * 这发生在集群创建时，从每个节点都有不同节点ID的集群开始，
+         * 而不必依赖冲突解决系统，因为在创建大型集群时，冲突解决系统太慢。
          * */
         long long epoch;
 
@@ -6651,8 +6692,8 @@ NULL
              * of a failure to persist the config, the conflict resolution code
              * will assign a unique config to this node. 
              *
-             * 无需在此处对配置进行fsync，因为在未能持久化配置的不幸事件中，冲突解决代码将
-             * 为该节点分配一个唯一的配置。
+             * 无需在此处对配置进行fsync，因为在未能持久化配置的不幸事件中，
+             * 冲突解决代码将为该节点分配一个唯一的配置。
              * */
             clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|
                                  CLUSTER_TODO_SAVE_CONFIG);
@@ -6706,8 +6747,7 @@ NULL
 /* Generates a DUMP-format representation of the object 'o', adding it to the
  * io stream pointed by 'rio'. This function can't fail. 
  *
- * 生成对象“o”的DUMP格式表示，并将其添加到“rio”指向的io流中。这个功能
- * 不会失败。
+ * 生成对象“o”的DUMP格式表示，并将其添加到“rio”指向的io流中。这个功能不会失败。
  * */
 void createDumpPayload(rio *payload, robj *o, robj *key) {
     unsigned char buf[2];
@@ -6716,8 +6756,7 @@ void createDumpPayload(rio *payload, robj *o, robj *key) {
     /* Serialize the object in an RDB-like format. It consist of an object type
      * byte followed by the serialized object. This is understood by RESTORE. 
      *
-     * 以类似RDB的格式序列化对象。它由对象类型字节和序列化对象组成。RESTORE可
-     * 以理解这一点。
+     * 以类似RDB的格式序列化对象。它由对象类型字节和序列化对象组成。RESTORE可以理解这一点。
      * */
     rioInitWithBuffer(payload,sdsempty());
     serverAssert(rdbSaveObjectType(payload,o));
@@ -6982,9 +7021,9 @@ typedef struct migrateCachedSocket {
  * the next time. 
  *
  * 返回一个migrateCachedSocket，其中包含一个与目标节点连接的TCP套接字，
- * 可能会返回一个缓存的套接字。如果无法建立连接，此函数负责向客户端发送错
- * 误。在这种情况下，返回-1。否则，一旦成功，就会返回套接字，调用方不应在使用后尝
- * 试释放它。如果调用方在使用套接字时检测到错误，则应调用migrateCloseSocket（），以便下次从头开始创建连接。
+ * 可能会返回一个缓存的套接字。如果无法建立连接，此函数负责向客户端发送错误。
+ * 在这种情况下，返回-1。否则，一旦成功，就会返回套接字，调用方不应在使用后尝试释放它。
+ * 如果调用方在使用套接字时检测到错误，则应调用migrateCloseSocket()，以便下次从头开始创建连接。
  * */
 migrateCachedSocket* migrateGetSocket(client *c, robj *host, robj *port, long timeout) {
     connection *conn;
@@ -7012,7 +7051,7 @@ migrateCachedSocket* migrateGetSocket(client *c, robj *host, robj *port, long ti
     if (dictSize(server.migrate_cached_sockets) == MIGRATE_SOCKET_CACHE_ITEMS) {
         /* Too many items, drop one at random. 
          *
-         * 项目太多，请随意丢弃一个。
+         * 条目太多，请随意丢弃一个。
          * */
         dictEntry *de = dictGetRandomKey(server.migrate_cached_sockets);
         cs = dictGetVal(de);

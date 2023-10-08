@@ -524,7 +524,7 @@ typedef struct {
                                  * */
     uint16_t flags;             /* node->flags copy 
                                  *
-                                 * node->标志复制
+                                 * node->flags 复制
                                  * */
     uint32_t notused1;
 } clusterMsgDataGossip;
@@ -658,7 +658,8 @@ typedef struct {
                                epoch advertised by its master if it is a
                                slave. 
                              *
-                             * 配置历元（如果它是主历元），或者如果它是从历元，则由其主历元通告的最后一个历元。
+                             * 主节点：config epoch
+                             * 从节点：主节点建议的 config epoch
                              * */
     uint64_t offset;    /* Master replication offset if node is a master or
                            processed replication offset if node is a slave. 
