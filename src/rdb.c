@@ -1731,7 +1731,7 @@ int rdbSaveRio(rio *rdb, int *error, int rdbflags, rdbSaveInfo *rsi) {
      * master will send us. 
      *
      * 如果我们将复制信息存储在磁盘上，也要保留脚本缓存：在重新启动后成功的PSYNC上，
-     * 我们需要能够处理主机将发送给我们的复制囤积中的任何EVALSHA。
+     * 我们需要能够处理主节点将发送给我们的复制囤积中的任何EVALSHA。
      * */
     if (rsi && dictSize(server.lua_scripts)) {
         di = dictGetIterator(server.lua_scripts);
@@ -3178,8 +3178,8 @@ int rdbLoadRio(rio *rdb, int rdbflags, rdbSaveInfo *rsi) {
          * load all the keys as they are, since the log of operations later
          * assume to work in an exact keyspace state. 
          *
-         * 检查键是否已过期。当从磁盘加载RDB文件时，无论是在启动时，还是从主机接收到RDB时，
-         * 都会使用此函数。在后一种情况下，主机负责键过期。如果我们在这里使键过期，那么主设备
+         * 检查键是否已过期。当从磁盘加载RDB文件时，无论是在启动时，还是从主节点接收到RDB时，
+         * 都会使用此函数。在后一种情况下，主节点负责键过期。如果我们在这里使键过期，那么主设备
          * 拍摄的快照可能不会反映在从属设备上。类似地，如果RDB是AOF文件的前导，我们希望按原样加载所有键，
          * 因为操作日志稍后会假设在精确的键空间状态下工作。
          * */
@@ -3425,7 +3425,7 @@ void backgroundSaveDoneHandler(int exitcode, int bysignal) {
     /* Possibly there are slaves waiting for a BGSAVE in order to be served
      * (the first stage of SYNC is a bulk transfer of dump.rdb) 
      *
-     * 可能有从机在等待BGSAVE以便得到服务（SYNC的第一阶段是dump.rdb的批量传输）
+     * 可能有从节点在等待BGSAVE以便得到服务（SYNC的第一阶段是dump.rdb的批量传输）
      * */
     updateSlavesWaitingBgsave((!bysignal && exitcode == 0) ? C_OK : C_ERR, type);
 }
@@ -3447,7 +3447,7 @@ void killRDBChild(void) {
 /* Spawn an RDB child that writes the RDB to the sockets of the slaves
  * that are currently in SLAVE_STATE_WAIT_BGSAVE_START state. 
  *
- * 生成一个子RDB，将RDB写入当前处于SLAVE_STATE_WAIT_BGSAVE_START状态的从机的套接字。
+ * 生成一个子RDB，将RDB写入当前处于SLAVE_STATE_WAIT_BGSAVE_START状态的从节点的套接字。
  * */
 int rdbSaveToSlavesSockets(rdbSaveInfo *rsi) {
     listNode *ln;
@@ -3578,7 +3578,7 @@ int rdbSaveToSlavesSockets(rdbSaveInfo *rsi) {
              * all the slaves in BGSAVE_START state, but an early call to
              * replicationSetupSlaveForFullResync() turned it into BGSAVE_END 
              *
-             * 撤消状态更改。调用方将对处于BGSAVE_START状态的所有从机执行清理，但早
+             * 撤消状态更改。调用方将对处于BGSAVE_START状态的所有从节点执行清理，但早
              * 期对replicationSetupSlaveForFullResync（）的调用将其转换为BGSAVE_END
              * */
             listRewind(server.slaves,&li);
@@ -3718,7 +3718,7 @@ rdbSaveInfo *rdbPopulateSaveInfo(rdbSaveInfo *rsi) {
      *
      * 如果实例是主实例，则只有当repl_backlog不为NULL时，我们才能填充复
      * 制信息。如果repl_backlog为NULL，则表示该实例不在任何复制链中。在
-     * 这种情况下，复制信息是无用的，因为当从设备连接到我们时，NULL repl_backlog
+     * 这种情况下，复制信息是无用的，因为当从节点连接到我们时，NULL repl_backlog
      * 将触发完全同步，同时我们将使用新的replid并清除replid2。
      * */
     if (!server.masterhost && server.repl_backlog) {
@@ -3728,7 +3728,7 @@ rdbSaveInfo *rdbPopulateSaveInfo(rdbSaveInfo *rsi) {
          * to reload replication ID/offset, it's safe because the next write
          * command must generate a SELECT statement. 
          *
-         * 请注意，当server.slavesldb为-1时，这意味着该主机在完全同步后没
+         * 请注意，当server.slavesldb为-1时，这意味着该主节点在完全同步后没
          * 有应用任何写命令。因此，我们可以让repl_stream_db为0，这允许重新启
          * 动的从属服务器重新加载复制ID/偏移量，这是安全的，因为下一个写命令必须生成SELECT语句。
          * */

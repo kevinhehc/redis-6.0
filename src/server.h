@@ -474,7 +474,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 #define CLIENT_UNBLOCKED (1<<7) /* This client was unblocked and is stored in
                                   server.unblocked_clients 
                                  *
-                                 * 此客户端已被取消阻止并存储在服务器中。unblocked_clients
+                                 * 此客户端已被取消阻塞并存储在服务器中。unblocked_clients
                                  * */
 #define CLIENT_LUA (1<<8) /* This is a non connected client used by Lua 
                            *
@@ -710,11 +710,11 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                            * */
 #define REPL_STATE_CONNECT 1 /* Must connect to master 
                               *
-                              * 必须连接到主机
+                              * 必须连接到主节点
                               * */
 #define REPL_STATE_CONNECTING 2 /* Connecting to master 
                                  *
-                                 * 正在连接到主机
+                                 * 正在连接到主节点
                                  * */
 /* --- Handshake states, must be ordered --- 
  *
@@ -774,7 +774,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
                                 * */
 #define REPL_STATE_CONNECTED 15 /* Connected to master 
                                  *
-                                 * 已连接到主机
+                                 * 已连接到主节点
                                  * */
 
 /* State of slaves from the POV of the master. Used in client->replstate.
@@ -783,7 +783,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
  * to start the next background saving in order to send updates to it. 
  *
  * 从节点的状态从主人的POV。用于 client->replstate。在SEND_BULK
- * 和ONLINE状态下，从设备在其输出队列中接收新的更新。在WAIT_BGSAVE
+ * 和ONLINE状态下，从节点在其输出队列中接收新的更新。在WAIT_BGSAVE
  * 状态下，服务器正在等待开始下一次后台保存，以便向其发送更新。
  * */
 #define SLAVE_STATE_WAIT_BGSAVE_START 6 /* We need to produce a new RDB file. 
@@ -1937,12 +1937,12 @@ typedef struct client {
     // 从「主节点」已经读取的数据量 = querybuf + reploff
     long long read_reploff; /* Read replication offset if this is a master. 
                              *
-                             * 读取复制偏移量（如果这是主机）。
+                             * 读取复制偏移量（如果这是主节点）。
                              * */
     // 从「主节点」已经处理完的数据量  = read_reploff - querybuf
     long long reploff;      /* Applied replication offset if this is a master. 
                              *
-                             * 如果这是主机，则应用复制偏移量。
+                             * 如果这是主节点，则应用复制偏移量。
                              * */
     long long repl_ack_off; /* Replication ack offset, if this is a slave. 
                              *
@@ -2591,7 +2591,7 @@ struct redisServer {
                                  * */
     mstime_t clients_pause_end_time; /* Time when we undo clients_paused 
                                       *
-                                      * 撤消客户端的时间_暂停
+                                      * 客户端暂停的最终时间，超过这个时间，客户端就可以解除暂停了
                                       * */
     char neterr[ANET_ERR_LEN];   /* Error buffer for anet.c 
                                   *
@@ -2795,7 +2795,7 @@ struct redisServer {
                                                           * */
     long long stat_unexpected_error_replies; /* Number of unexpected (aof-loading, replica to master, etc.) error replies 
                                               *
-                                              * 意外错误回复数（aof加载、复制到主机等）
+                                              * 意外错误回复数（aof加载、复制到主节点等）
                                               * */
     long long stat_io_reads_processed; /* Number of read events processed by IO / Main threads 
                                         *
@@ -3228,7 +3228,7 @@ struct redisServer {
     int slaveseldb;                     /* 复制输出中上次选择的数据库 ----- Last SELECTed DB in replication output */
     
     // 每隔一段时间去 ping 一下从节点，看下链接是否正常，默认10秒
-    int repl_ping_slave_period;         /* 主设备每N秒ping一次从设备 ---- Master pings the slave every N seconds */
+    int repl_ping_slave_period;         /* 主设备每N秒ping一次从节点 ---- Master pings the slave every N seconds */
     
     // 环形缓冲复制缓冲区的指针
     char *repl_backlog;                 /* 部分同步的复制缓冲区 ---- Replication backlog for partial syncs */
@@ -3281,19 +3281,19 @@ struct redisServer {
     char *masterauth;                   /* 使用主密码进行AUTH AUTH with this password with master */
     
     // 如果值为空才可以是主节点
-    char *masterhost;                   /* 主机主机名 Hostname of master */
+    char *masterhost;                   /* 主节点主节点名 Hostname of master */
     
     // 主节点的端口
-    int masterport;                     /* 主机端口 Port of master */
+    int masterport;                     /* 主节点端口 Port of master */
     
     // 通信超时时间，默认60秒
-    int repl_timeout;                   /* 主机空闲N秒后超时 Timeout after N seconds of master idle */
+    int repl_timeout;                   /* 主节点空闲N秒后超时 Timeout after N seconds of master idle */
     
     // 作为从节点，需要拉数据来同步的主节点
     client *master;                     /* 此从节点服务器的主客户端 Client that is master for this slave */
     
     // 缓存的主节点，主要是主从节点变来变去的时候，用于缓存 节点id之类的，后面看下是否可以直接增量同步
-    client *cached_master;              /* 缓存的主机将被重新用于PSYNC。 Cached master to be reused for PSYNC. */
+    client *cached_master;              /* 缓存的主节点将被重新用于PSYNC。 Cached master to be reused for PSYNC. */
     
     int repl_syncio_timeout;            /* 同步I/O调用超时 Timeout for synchronous I/O calls */
     
@@ -3326,10 +3326,10 @@ struct redisServer {
     
     int slave_priority;                 /* 在INFO中报告并由Sentinel使用。 Reported in INFO and used by Sentinel. */
     
-    int slave_announce_port;            /* 给主机这个监听端口。 Give the master this listening port. */
+    int slave_announce_port;            /* 给主节点这个监听端口。 Give the master this listening port. */
     
     
-    char *slave_announce_ip;            /* 将此ip地址提供给主机。 Give the master this ip address. */
+    char *slave_announce_ip;            /* 将此ip地址提供给主节点。 Give the master this ip address. */
 
     /* The following two fields is where we store master PSYNC replid/offset
      * while the PSYNC is in progress. At the end we'll copy the fields into
@@ -3430,10 +3430,10 @@ struct redisServer {
                                      * #的客户端执行阻止cmd。
                                      * */
     unsigned int blocked_clients_by_type[BLOCKED_NUM];
-    // 要在下一次事件 lopp 前取消阻塞的所有客户端
+    // 要在下一次事件 loop 前取消阻塞的所有客户端
     list *unblocked_clients; /* list of clients to unblock before next loop 
                               *
-                              * 在下一个循环之前要取消阻止的客户端列表
+                              * 在下一个循环之前要取消阻塞的客户端列表
                               * */
     list *ready_keys;        /* List of readyList structures for BLPOP & co 
                               *

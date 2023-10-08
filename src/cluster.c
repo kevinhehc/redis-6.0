@@ -2444,7 +2444,7 @@ int clusterProcessPacket(clusterLink *link) {
         /* If we are a slave performing a manual failover and our master
          * sent its offset while already paused, populate the MF state. 
          *
-         * 如果我们是执行手动故障转移的从设备，并且我们的主设备在暂停时发送了偏移量，则填充MF状态。
+         * 如果我们是执行手动故障转移的从节点，并且我们的主节点在暂停时发送了偏移量，则填充MF状态。
          * */
         if (server.cluster->mf_end &&
             nodeIsSlave(myself) &&
@@ -4062,7 +4062,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
  * 此函数返回此节点（从节点）在其主从环上下文中的“等级”。从节点的级别由同一主节点的其他
  * 从节点的数量给定，这些从节点与本地主节点相比具有更好的复制偏移量（更好意味着更大，因此
  * 它们要求更多的数据）。等级为0的从节点是具有最大（最新）复制偏移量的从节点,
- * 依此类推。请注意，由于等级是如何计算的，多个从设备可能具有相同的等级，以防它们具有
+ * 依此类推。请注意，由于等级是如何计算的，多个从节点可能具有相同的等级，以防它们具有
  * 相同的偏移。从节点等级用于增加开始选举的延迟，以便获得投票并替换失败的主节点。复制偏
  * 移量更好的从节点更有可能获胜。
  * */
@@ -4114,13 +4114,13 @@ int clusterGetSlaveRank(void) {
  * 调用，我们无法连续记录相同的事情。只有在给定的一组条件为真时，此函数才能通过日志
  * 记录工作：
  * 
- * 1）无法启动故障转移的原因已更改。原因还包括一个NONE原因，当从设备
- * 发现其主设备正常时，我们将状态重置为NONE（无FAIL标志）。
+ * 1）无法启动故障转移的原因已更改。原因还包括一个NONE原因，当从节点
+ * 发现其主节点正常时，我们将状态重置为NONE（无FAIL标志）。
  * 
  * 2） 此外，如果主节点仍然关闭，并且没有故障转移的原因仍然相同，但超过CLUSTER_CANT_F
  * AILOVER_RELOG_PERIOD秒，则会再次发出日志。
  * 
- * 3） 最后，该函数仅在从设备停机超过5秒+NODE_TIMEOUT时记录。这样，当故障转移在合理的
+ * 3） 最后，该函数仅在从节点停机超过5秒+NODE_TIMEOUT时记录。这样，当故障转移在合理的
  * 时间内启动时，就不会记录任何内容。调用该函数的原因是从属无法进行故障切换，这是整
  * 数宏CLUSTER_CANT_failover_*之一。只有当“myself”是
  * 从函数时，才能保证调用该函数。
@@ -4181,8 +4181,9 @@ void clusterLogCantFailover(int reason) {
  * Note that it's up to the caller to be sure that the node got a new
  * configuration epoch already. 
  *
- * 该函数实现了自动和手动故障切换的最后一部分，在该部分中，从设备获取其主设备的哈希
- * 槽，并传播新配置。请注意，由调用者来确保节点已经获得了新的配置epoch。
+ * 该函数实现了自动和手动故障切换的最后一部分，在该部分中，从节点获取其主节点的哈希槽，并传播新配置。
+ * 
+ * 请注意，由调用者来确保节点已经获得了新的配置epoch。
  * */
 void clusterFailoverReplaceYourMaster(void) {
     int j;
@@ -4385,7 +4386,7 @@ void clusterHandleSlaveFailover(void) {
          * to all the other slaves so that they'll updated their offsets
          * if our offset is better. 
          *
-         * 既然我们已经安排好了选举，就把我们的补偿广播给所有其他从节点，这样如果我们的补偿更好，他们就会更新他们的补偿。
+         * 既然我们已经安排好了选举，就把我们的补偿广播给所有其他从节点，这样如果我们的偏移更好，他们就会更新他们的偏移。
          * */
         clusterBroadcastPong(CLUSTER_BROADCAST_LOCAL_SLAVES);
         return;
@@ -4397,8 +4398,8 @@ void clusterHandleSlaveFailover(void) {
      *
      * Not performed if this is a manual failover. 
      *
-     * 由于我们计算了选举延迟，我们可能从同一主节点的其他从节点那里收到了更多更新的偏移。如
-     * 果我们的排名发生变化，请更新延迟。如果这是手动故障切换，则不执行。
+     * 由于我们计算了选举延迟，我们可能从同一主节点的其他从节点那里收到了更多更新的偏移。
+     * 如果我们的排名发生变化，请更新延迟。如果这是手动故障切换，则不执行。
      * */
     if (server.cluster->failover_auth_sent == 0 &&
         server.cluster->mf_end == 0)
@@ -4520,12 +4521,14 @@ void clusterHandleSlaveFailover(void) {
  
  *
  * 此功能负责决定是否应将此复制副本迁移到另一个（孤立的）主节点。只有当：
- * 1）我们是从节点时，clusterCron（）函数才会调用它。
+ * 1） 我们是从节点时，clusterCron（）函数才会调用它。
  * 2） 检测到群集中至少有一个孤立主节点。
- * 3） 我们是从节点数量最多的主节点之一的从节点。这些检查是由调用方执行的，因为
- * 它无论如何都需要迭代节点，所以如果确实需要的话，我们会花时间在clusterHandleSlaveMigration（）中。
- * 使用预先计算的max_slaves调用该函数，即单个主节点的最大工作（不处于FAIL状态）从节点数量。迁移的附加条件在函
- * 数中进行检查。
+ * 3） 我们是从节点数量最多的主节点之一的从节点。
+ * 
+ * 这些检查是由调用方执行的，因为它无论如何都需要迭代节点，所以如果确实需要的话，
+ * 我们会花时间在clusterHandleSlaveMigration（）中。
+ * 使用预先计算的max_slaves调用该函数，即单个主节点的最大工作（不处于FAIL状态）从节点数量。
+ * 迁移的附加条件在函数中进行检查。
  * */
 void clusterHandleSlaveMigration(int max_slaves) {
     int j, okslaves = 0;
@@ -4567,7 +4570,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
      * 步骤3：确定迁移的候选者，并检查在ok slave数量最多的master中，我是否是节点ID最小的那个（“候选者slave”）。
      *
      * 注意：这意味着最终会发生副本迁移，因为可以再次访问的从节点总是会清除其FAIL标志，所以最终必须有一个候选者。
-     * 同时，这并不意味着不可能有种族条件（两个从节点同时迁移），但这不太可能发生，而且发生时是无害的。
+     *      同时，这并不意味着不可能有种族条件（两个从节点同时迁移），但这不太可能发生，而且发生时是无害的。
      * */
     candidate = myself;
     di = dictGetSafeIterator(server.cluster->nodes);
@@ -4674,29 +4677,29 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * data loss due to the asynchronous master-slave replication.
  * -------------------------------------------------------------------------- 
  *
- * CLUSTER手动故障转移这是从节点在手动故障转移过程中执行的重要步骤：
+ * CLUSTER手动故障转移
+ * 
+ * 这是从节点在手动故障转移过程中执行的重要步骤：
  *
- * 1）用户发送CL
- * USTER failover命令。故障转移状态已初始化，将mf_end设置为我们
- * 将中止尝试的毫秒unix时间。
+ * 1）用户发送 CLUSTER FAILOVER  命令。故障转移状态已初始化，将mf_end设置为我们
+ *    将中止尝试的毫秒unix时间。
  *
- * 2） 从设备向主设备发送MFSTART消息，请求暂
- * 停客户端两次手动故障转移超时CLUSTER_MF_timeout。当master
- * 暂停进行手动故障转移时，它也开始用CLUSTERMSG_FLAG0_paused
- * 标记数据包。
+ * 2）从节点向主节点发送MFSTART消息，请求暂停客户端两次手动故障转移超时 CLUSTER_MF_TIMEOUT。
+ *    当master 暂停进行手动故障转移时，它也开始用 CLUSTERMSG_FLAG0_PAUSED 标记数据包。
  *
  * 3） 从服务器等待主节点发送其标记为PAUSED的复制偏移量。
  *
  * 4） 如果slave从master接收到偏移量，并且偏移量匹配，则mf_can_start设置为1，
- * clusterHandleSlaveFailover（）将照常执行故
- * 障转移，不同的是，投票请求将被修改，以强制master投票给具有工作master
- * 的slave。从主节点的角度来看，事情更简单：当接收到PAUSE_CLIENTS数
- * 据包时，主节点也将mf_end和发送方设置在mf_slave中。在手动故障转移的时
- * 间限制期间，主设备只会更频繁地向该从设备发送带有PAUSED标志的PING，以便
- * 从设备在接收到来自设置了该标志的主设备的数据包时设置mf_master_offset。
- * 手动故障切换的目标是执行快速故障切换，而不会因异步主从复制而导致数据丢失-
- * ----------------------------------------
- * ---------------------------------
+ *     clusterHandleSlaveFailover（）将照常执行故障转移，不同的是，投票请求将被修改，
+ *     以强制master投票给具有工作master的slave。
+ *     
+ *  在主节点的角度来看，事情更简单：当接收到 PAUSE_CLIENTS 数据包时，
+ *  主节点也将mf_end和发送方设置在mf_slave中。在手动故障转移的时间限制期间，
+ *  主节点只会更频繁地向该从节点发送带有PAUSED标志的PING，
+ *  以便从节点在接收到来自设置了该标志的主节点的数据包时设置mf_master_offset。
+ *  
+ * 手动故障切换的目标是执行快速故障切换，而不会因异步主从复制而导致数据丢失
+ * -------------------------------------------------------------------------
  * */
 
 /* Reset the manual failover state. This works for both masters and slaves
@@ -4705,12 +4708,17 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * The function can be used both to initialize the manual failover state at
  * startup or to abort a manual failover in progress. 
  *
- * 重置手动故障切换状态。这对主设备和从设备都有效，因为手动故障转移的所有状态都已清除。
+ * 重置手动故障切换状态。这对主节点和从节点都有效，因为手动故障转移的所有状态都已清除。
+ * 
  * 该功能既可用于在启动时初始化手动故障转移状态，也可用于中止正在进行的手动故障转移。
  * */
 void resetManualFailover(void) {
     if (server.cluster->mf_end && clientsArePaused()) {
         server.clients_pause_end_time = 0;
+
+        // 再次调用一次是因为客户端还处理阻塞状态，
+        // 但是 server.clients_pause_end_time >  server.mstime
+        // 上一句 「server.clients_pause_end_time = 0;」 又刚刚置为0
         clientsArePaused(); /* Just use the side effect of the function. 
                              *
                              * 只需使用函数的副作用。
@@ -4975,7 +4983,7 @@ void clusterCron(void) {
      * 迭代节点以检查是否需要将某些内容标记为失败。
      * 此循环还负责：
      * 1） 检查是否存在孤立的主节点器（没有非故障从节点的主节点）。
-     * 2） 计算单个主设备的最大非故障从设备数量。
+     * 2） 计算单个主节点的最大非故障从节点数量。
      * 3） 如果我们是从节点，请为主节点计算从节点的数量。
      * */
     orphaned_masters = 0;
@@ -5005,8 +5013,8 @@ void clusterCron(void) {
              * slots, have no working slaves, but used to have at least one
              * slave, or failed over a master that used to have slaves. 
              *
-             * 如果主设备为非零数量的插槽提供服务，没有工作的从设备，但曾经至少有一个从设备，或
-             * 者故障转移到曾经有从设备的主设备，则该主设备将成为孤立的。
+             * 如果主节点为非零数量的插槽提供服务，没有工作的从节点，但曾经至少有一个从节点，或
+             * 者故障转移到曾经有从节点的主节点，则该主节点将成为孤立的。
              * */
             if (okslaves == 0 && node->numslots > 0 &&
                 node->flags & CLUSTER_NODE_MIGRATE_TO)
@@ -5383,7 +5391,7 @@ int clusterDelNodeSlots(clusterNode *node) {
 /* Clear the migrating / importing state for all the slots.
  * This is useful at initialization and when turning a master into slave. 
  *
- * 清除所有插槽的迁移/导入状态。这在初始化和将主设备转换为从设备时非常有用。
+ * 清除所有插槽的迁移/导入状态。这在初始化和将主节点转换为从节点时非常有用。
  * */
 void clusterCloseAllSlots(void) {
     memset(server.cluster->migrating_slots_to,0,

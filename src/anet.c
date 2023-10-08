@@ -153,7 +153,7 @@ int anetKeepAlive(char *err, int fd, int interval)
     return ANET_OK;
 }
 
-// Nagle算法通过将未确认的数据存入缓冲区直到蓄足一个包一起发送的方法，来减少主机发送的零碎小数据包的数目。
+// Nagle算法通过将未确认的数据存入缓冲区直到蓄足一个包一起发送的方法，来减少主节点发送的零碎小数据包的数目。
 // 这样一来势必会造成通信的延迟，TCP_NODELAY可以用来设置Nagle算法是否启用。
 
 /* 设置noDelay延迟的时间 */
@@ -245,12 +245,12 @@ int anetRecvTimeout(char *err, int fd, long long ms) {
  * into a validating / normalizing function. */
 
 // anetGenericResolve（） 由 anetResolve（） 和 anetResolveIP（） 调用来完成实际工作。
-// 它解析主机名“host”，并将 IP 地址的字符串表示形式设置为“ipbuf”指向的缓冲区中。
+// 它解析主节点名“host”，并将 IP 地址的字符串表示形式设置为“ipbuf”指向的缓冲区中。
 
-// 如果标志设置为 ANET_IP_ONLY则该函数仅解析实际上已经是 IPv4 或 IPv6 地址的主机名。
+// 如果标志设置为 ANET_IP_ONLY则该函数仅解析实际上已经是 IPv4 或 IPv6 地址的主节点名。
 // 这会将函数转换为验证/规范化函数。
 
-/* 解析的泛型方法，可以根据条件解析host主机名或IP地址 */
+/* 解析的泛型方法，可以根据条件解析host主节点名或IP地址 */
 int anetGenericResolve(char *err, char *host, char *ipbuf, size_t ipbuf_len,
                        int flags)
 {

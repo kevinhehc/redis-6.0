@@ -600,10 +600,10 @@ void afterErrorReply(client *c, const char *s, size_t len) {
      * will produce an error. However it is useful to log such events since
      * they are rare and may hint at errors in a script or a bug in Redis.
      *
-     * 有时，从机向主机回复错误并调用此函数可能是正常的。实际上，错误永远不会被发送，因
+     * 有时，从节点向主节点回复错误并调用此函数可能是正常的。实际上，错误永远不会被发送，因
      * 为针对主客户端的addReply*（）没有效果。。。一个值得注意的例子是：EVA
      * L’redis.call（“incr”，KEYS[1]）；redis.call（
-     * “nonexisting”）'1x其中主机必须传播第一个更改，即使第二个更改会产
+     * “nonexisting”）'1x其中主节点必须传播第一个更改，即使第二个更改会产
      * 生错误。然而，记录这样的事件是有用的，因为它们很罕见，可能会提示脚本中的错误或R
      * edis中的错误。*/
     int ctype = getClientType(c);
@@ -1610,7 +1610,7 @@ void freeClient(client *c) {
      * Note that before doing this we make sure that the client is not in
      * some unexpected state, by checking its flags.
      *
-     * 如果是我们的主机断开连接，我们应该确保缓存状态，以便稍后尝试部分重新同步。请注意
+     * 如果是我们的主节点断开连接，我们应该确保缓存状态，以便稍后尝试部分重新同步。请注意
      * ，在执行此操作之前，我们通过检查其标志来确保客户端不会处于某种意外状态。*/
     if (server.master && c->flags & CLIENT_MASTER) {
         serverLog(LL_WARNING,"Connection with master lost.");
@@ -1903,7 +1903,7 @@ int writeToClient(client *c, int handler_installed) {
          * that take some time to just fill the socket output buffer.
          * We just rely on data / pings received for timeout detection.
          *
-         * 对于代表主机的客户端，我们不将发送数据视为交互，因为我们总是发送REPLCONF
+         * 对于代表主节点的客户端，我们不将发送数据视为交互，因为我们总是发送REPLCONF
          *  ACK命令，这些命令只需要一些时间来填充套接字输出缓冲区。我们只是依靠接收到的
          * 数据/ping进行超时检测。*/
         if (!(c->flags & CLIENT_MASTER)) c->lastinteraction = server.unixtime;
@@ -2148,7 +2148,7 @@ int processInlineBuffer(client *c) {
      * This is useful for a slave to ping back while loading a big
      * RDB file.
      *
-     * 来自从属设备的换行符可用于刷新上次ACK时间。这对于从机在加载大型RDB文件时进
+     * 来自从属设备的换行符可用于刷新上次ACK时间。这对于从节点在加载大型RDB文件时进
      * 行ping返回非常有用。*/
     if (querylen == 0 && getClientType(c) == CLIENT_TYPE_SLAVE)
         c->repl_ack_time = server.unixtime;
@@ -3503,7 +3503,7 @@ void helloCommand(client *c) {
  * when a POST or "Host:" header is seen, and will log the event from
  * time to time (to avoid creating a DOS as a result of too many logs).
  *
- * 此回调绑定到 POST 和“主机：”命令名称。
+ * 此回调绑定到 POST 和“主节点：”命令名称。
  * 这些并不是真正的命令，而是用于安全攻击，以便通过HTTP与Redis实例通信，使用一种称为“跨协议脚本”的技术，
  * 该技术利用Redis等服务将丢弃无效的HTTP标头并处理以下内容的事实。为了防止这种攻击，
  * Redis 将在看到 POST 或“Host：”标头时终止连接，并将不时记录事件（以避免由于日志过多而创建 DOS）。
@@ -3889,7 +3889,8 @@ int clientsArePaused(void) {
             /* Don't touch slaves and blocked clients.
              * The latter pending requests will be processed when unblocked.
              *
-             * 不要接触和被阻塞的客户端。后一个待处理的请求将在解锁时进行处理。
+             * 不要接触从节点和被阻塞的客户端。
+             * 后一个待处理的请求将在解锁时进行处理。
              * */
             if (c->flags & (CLIENT_SLAVE|CLIENT_BLOCKED)) continue;
             queueClientForReprocessing(c);

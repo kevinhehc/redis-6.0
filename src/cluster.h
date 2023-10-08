@@ -170,7 +170,7 @@ typedef struct clusterLink {
                                    * */
 #define CLUSTER_NODE_MIGRATE_TO 256 /* Master eligible for replica migration. 
                                      *
-                                     * 符合复制副本迁移条件的主机。
+                                     * 符合复制副本迁移条件的主节点。
                                      * */
 #define CLUSTER_NODE_NOFAILOVER 512 /* Slave will not try to failover. 
                                      *
@@ -420,11 +420,11 @@ typedef struct clusterState {
                                  * */
     int failover_auth_sent;     /* True if we already asked for votes. 
                                  *
-                                 * 如果我们已经要求投票，那就对了。
+                                 * 如果我们已经要求投票，这个值=true。
                                  * */
     int failover_auth_rank;     /* This slave rank for current auth request. 
                                  *
-                                 * 当前身份验证请求的此从属级别。
+                                 * 当前身份验证请求的此从属级别。越小越可能成为主节点
                                  * */
     uint64_t failover_auth_epoch; /* Epoch of the current election. 
                                    *
@@ -442,11 +442,12 @@ typedef struct clusterState {
     mstime_t mf_end;            /* Manual failover time limit (ms unixtime).
                                    It is zero if there is no MF in progress. 
                                  *
-                                 * 手动故障转移限制的结束时间（ms-unixtime）。如果没有正在进行的手动故障转移，则为零。
+                                 * 手动故障转移限制的结束时间ms。
+                                 * 如果没有正在进行的手动故障转移，则为零。
                                  * */
     /* Manual failover state of master. 
      *
-     * 主机的手动故障转移状态。
+     * 主节点的手动故障转移状态。
      * */
     clusterNode *mf_slave;      /* Slave performing the manual failover. 
                                  *
@@ -454,12 +455,12 @@ typedef struct clusterState {
                                  * */
     /* Manual failover state of slave. 
      *
-     * 从机的手动故障转移状态。
+     * 从节点的手动故障转移状态。
      * */
     long long mf_master_offset; /* Master offset the slave needs to start MF
                                    or zero if still not received. 
                                  *
-                                 * 主偏移-从设备需要启动MF或零（如果仍未收到）。
+                                 * 主节点偏移-从节点需要启动MF或零（如果仍未收到）。
                                  * */
     int mf_can_start;           /* If non-zero signal that the manual failover
                                    can start requesting masters vote. 
@@ -704,12 +705,12 @@ typedef struct {
  * */
 #define CLUSTERMSG_FLAG0_PAUSED (1<<0) /* Master paused for manual failover. 
                                         *
-                                        * 主机已暂停以进行手动故障转移。
+                                        * 主节点已暂停以进行手动故障转移。
                                         * */
 #define CLUSTERMSG_FLAG0_FORCEACK (1<<1) /* Give ACK to AUTH_REQUEST even if
                                             master is up. 
                                           *
-                                          * 即使主机已启动，也向AUTH_REQUEST发出ACK。
+                                          * 即使主节点已启动，也向AUTH_REQUEST发出ACK。
                                           * */
 
 /* ---------------------- API exported outside cluster.c --------------------

@@ -1785,7 +1785,7 @@ int clientsCronResizeQueryBuffer(client *c) {
      * transfer (a huge value or a big MIGRATE operation) it will keep using
      * a lot of memory. 
      *
-     * 代表主机的客户端还使用“挂起的查询缓冲区”，这是我们正在读取的流中尚未应用的部分
+     * 代表主节点的客户端还使用“挂起的查询缓冲区”，这是我们正在读取的流中尚未应用的部分
      * 。这样的缓冲区也需要不时地调整大小，否则在一个非常大的传输（一个巨大的值或一个大
      * 的MIGRATE操作）之后，它将继续使用大量内存。*/
     if (c->flags & CLIENT_MASTER) {
@@ -5877,7 +5877,7 @@ void infoCommand(client *c) {
 void monitorCommand(client *c) {
     /* ignore MONITOR if already slave or in monitor mode 
      *
-     * 忽略MONITOR（如果已从机或处于监控模式）*/
+     * 忽略MONITOR（如果已从节点或处于监控模式）*/
     if (c->flags & CLIENT_SLAVE) return;
 
     c->flags |= (CLIENT_SLAVE|CLIENT_MONITOR);
@@ -6416,7 +6416,7 @@ void loadDataFromDisk(void) {
                  * information, in order to allow partial resynchronizations
                  * with masters. 
                  *
-                 * 如果我们是从设备，请根据此信息创建缓存的主设备，以便允许与主设备进行部分重新同步。*/
+                 * 如果我们是从节点，请根据此信息创建缓存的主设备，以便允许与主设备进行部分重新同步。*/
                 replicationCacheMasterUsingMyself();
                 selectDb(server.cached_master,rsi.repl_stream_db);
             }

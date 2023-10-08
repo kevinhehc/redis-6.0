@@ -134,8 +134,8 @@ robj *lookupKey(redisDb *db, robj *key, int flags) {
  * 当我们在获得链接到键的对象后写入键时，不应使用此API，而应仅用于只读操作。
  * 标志更改此命令的行为：LOOKUP_NONE（或零）：不传递任何特殊标志。LOOKUP_NOTOUCH：不要更改键
  * 的最后访问时间。注意：如果键在逻辑上过期但仍然存在，则此函数也返回NULL，以
- * 防这是从项，因为此API仅用于读取操作。即使键过期是由主机驱动的，我们也可以正
- * 确地报告从机上的键过期，即使主机延迟通过复制链接中的DEL使我们的键过期。
+ * 防这是从项，因为此API仅用于读取操作。即使键过期是由主节点驱动的，我们也可以正
+ * 确地报告从节点上的键过期，即使主节点延迟通过复制链接中的DEL使我们的键过期。
  * */
 robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
     robj *val;
@@ -164,13 +164,13 @@ robj *lookupKeyReadWithFlags(redisDb *db, robj *key, int flags) {
          *
          * Notably this covers GETs when slaves are used to scale reads. 
          *
-         * 然而，如果我们在从机的上下文中，expireIfNeeded（）不会真正尝试使键
-         * 过期，它只返回有关键“逻辑”状态的信息：键过期取决于主机，以便对主机的数据集
+         * 然而，如果我们在从节点的上下文中，expireIfNeeded（）不会真正尝试使键
+         * 过期，它只返回有关键“逻辑”状态的信息：键过期取决于主节点，以便对主节点的数据集
          * 有一致的看法。
          * 
          * 然而，如果命令调用方不是master，并且作为额外的安全措施，调用
          * 的命令是只读命令，我们可以在这里安全地返回NULL，并为以只读方式访问过期值的客
-         * 户端提供更一致的行为，也就是说键不存在。值得注意的是，这涵盖了当从设备用于缩放
+         * 户端提供更一致的行为，也就是说键不存在。值得注意的是，这涵盖了当从节点用于缩放
          * 读取时的GET。
          * */
         if (server.current_client &&
@@ -425,7 +425,7 @@ robj *dbRandomKey(redisDb *db) {
                  * are the conditions for an infinite loop, eventually we
                  * return a key name that may be already expired. 
                  *
-                 * 如果DB仅由具有过期集的键组成，则可能会发生所有键在逻辑上都已在从机中过期的情况，
+                 * 如果DB仅由具有过期集的键组成，则可能会发生所有键在逻辑上都已在从节点中过期的情况，
                  * 因此该函数不能因为expireIfNeeded（）为false而停止，也不能因为dictGetRandomKey（）
                  * 返回NULL（有键要返回）而停止。为了防止无限循环，我们做了一些尝试，但如果存在无限循环的条件，
                  * 最终我们会返回一个可能已经过期的键名称。
@@ -1970,8 +1970,8 @@ int keyIsExpired(redisDb *db, robj *key) {
  * 族。
  *
  * 函数的行为取决于实例的复制角色，因为从实例不会使键过期，它们会等待来自主实
- * 例的DEL来处理一致性问题。然而，即使从机也会尝试为函数提供一致的返回值，这样在
- * 从机端执行的读取命令将能够表现得像键过期一样，即使键仍然存在（因为主机尚未传
+ * 例的DEL来处理一致性问题。然而，即使从节点也会尝试为函数提供一致的返回值，这样在
+ * 从节点端执行的读取命令将能够表现得像键过期一样，即使键仍然存在（因为主节点尚未传
  * 播DEL）。
  *
  * 在master中，作为找到过期键的副作用，该键将从数据库中逐出。
@@ -1998,8 +1998,8 @@ int expireIfNeeded(redisDb *db, robj *key) {
      * that is, 0 if we think the key should be still valid, 1 if
      * we think the key is expired at this time. 
      *
-     * 如果我们在从机的上下文中运行，而不是从数据库中驱逐过期的键，我们会返回ASAP
-     * ：从机键的过期由主机控制，主机会向我们发送过期键的合成DEL操作。尽管如此，
+     * 如果我们在从节点的上下文中运行，而不是从数据库中驱逐过期的键，我们会返回ASAP
+     * ：从节点键的过期由主节点控制，主节点会向我们发送过期键的合成DEL操作。尽管如此，
      * 我们还是会尝试向调用者返回正确的信息，即，如果我们认为键应该仍然有效，则返回0
      * ；如果我们认为此时键已过期，则返回1。
      * */
