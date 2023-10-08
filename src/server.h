@@ -3247,10 +3247,10 @@ struct redisServer {
     long long repl_backlog_off;         /* 复制缓冲区缓冲区中第一个字节的复制“主偏移量”。
                                          * Replication "master offset" of first byte in the replication backlog buffer. */
     
-    time_t repl_backlog_time_limit;     /* 积压工作释放后没有奴隶的时间。
+    time_t repl_backlog_time_limit;     /* 积压工作释放后没有从节点的时间。
                                          * Time without slaves after the backlog gets released. */
     
-    time_t repl_no_slaves_since;        /* 从那时起我们就没有奴隶了。仅当server.slaves len为0时有效。
+    time_t repl_no_slaves_since;        /* 从那时起我们就没有从节点了。仅当server.slaves len为0时有效。
                                          * We have no slaves since that time. Only valid if server.slaves len is 0.*/
     
     // 如果实际值repl_good_slaves_count小于这个值，那么阻塞客户端的写入

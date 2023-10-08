@@ -3816,7 +3816,7 @@ void flushSlavesOutputBuffers(void) {
          * 2.put_online_on_ack标志为真。要知道为什么在这种情况下我们不想将数据发送到副本，
          *   请 grep 作为此标志的标志。
          *
-         * 3.显然，如果奴隶不在线。
+         * 3.显然，如果从节点不在线。
          */
         if (slave->replstate == SLAVE_STATE_ONLINE &&
             can_receive_writes &&

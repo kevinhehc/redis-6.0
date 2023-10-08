@@ -1157,7 +1157,7 @@ void serverLogRaw(int level, const char *msg) {
         } else {
             role_char = (server.masterhost ? 'S':'M'); /* Slave or Master. 
                                                         *
-                                                        * 奴隶或主人。*/
+                                                        * 从节点或主人。*/
         }
         fprintf(fp,"%d:%c %s %c %s\n",
             (int)getpid(),role_char, buf,c[level],msg);
