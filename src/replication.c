@@ -324,7 +324,7 @@ void replicationFeedSlaves(list *slaves, int dictid, robj **argv, int argc) {
      * master replication history and has the same backlog and offsets). 
      *
      * 如果节点不是顶级主节点，请尽快返回：我们只代理从主节点接收的数据流，以便传播*identicalreplication流。
-     * 通过这种方式，该从节点服务器可以通告与主服务器相同的复制ID（因为它共享主服务器复制历史，并且具有相同的缓冲区和偏移）。
+     * 通过这种方式，该从节点服务器可以通告与主节点相同的复制ID（因为它共享主节点复制历史，并且具有相同的缓冲区和偏移）。
      * */
     // 表示是从节点
     if (server.masterhost != NULL) return;
@@ -789,7 +789,7 @@ int masterTryPartialResynchronization(client *c // c 是发送数据同步请求
      * Note that there are two potentially valid replication IDs: the ID1
      * and the ID2. The ID2 however is only valid up to a specific offset. 
      *
-     * 该主服务器的复制ID是否与想成为从节点服务器的用户通过PSYNC发布的相同？如果复
+     * 该主节点的复制ID是否与想成为从节点服务器的用户通过PSYNC发布的相同？如果复
      * 制ID已更改，则此主节点具有不同的复制历史记录，并且无法继续。请注意，有两个可能有
      * 效的复制ID：ID1和ID2。然而，ID2仅在特定偏移量之前有效。
      * */
@@ -1910,7 +1910,7 @@ void updateSlavesWaitingBgsave(int bgsaveerr, int type) {
  * slaves, so the command should be called when something happens that
  * alters the current story of the dataset. 
  *
- * 使用新的随机节点复制ID更改当前节点复制ID。这将阻止该主服务器和其他从节点服务器
+ * 使用新的随机节点复制ID更改当前节点复制ID。这将阻止该主节点和其他从节点服务器
  * 之间成功的PSYNC，因此当发生改变数据集当前情况的事情时，应该调用该命令。
  * */
 void changeReplicationId(void) {
@@ -2141,7 +2141,7 @@ void readSyncBulkPayload(connection *conn) {
     /* Static vars used to hold the EOF mark, and the last bytes received
      * from the server: when they match, we reached the end of the transfer. 
      *
-     * 静态变量用于保存EOF标记和从服务器接收的最后一个字节：当它们匹配时，表示我们到达传输的末尾。
+     * 静态变量用于保存EOF标记和从节点接收的最后一个字节：当它们匹配时，表示我们到达传输的末尾。
      * */
     static char eofmark[CONFIG_RUN_ID_SIZE];
     static char lastbytes[CONFIG_RUN_ID_SIZE];
@@ -2596,7 +2596,7 @@ void readSyncBulkPayload(connection *conn) {
      * offset of the master. The secondary ID / offset are cleared since
      * we are starting a new history. 
      *
-     * 在重新全量同步之后，我们使用主服务器的复制ID和偏移量。由于我们正在启动一个新的历史记录，因此会清除次要ID/偏移量。
+     * 在重新全量同步之后，我们使用主节点的复制ID和偏移量。由于我们正在启动一个新的历史记录，因此会清除次要ID/偏移量。
      * */
     memcpy(server.replid,server.master->replid,sizeof(server.replid));
     server.master_repl_offset = server.master->reploff;
@@ -2607,7 +2607,7 @@ void readSyncBulkPayload(connection *conn) {
      * or not, in order to behave correctly if they are promoted to
      * masters after a failover. 
      *
-     * 如果需要，让我们创建同步缓冲区。从节点服务器需要积累积压工作，无论它们是否有子从节点服务器，以便在故障转移后升级为主服务器时能够正常工作。
+     * 如果需要，让我们创建同步缓冲区。从节点服务器需要积累积压工作，无论它们是否有子从节点服务器，以便在故障转移后升级为主节点时能够正常工作。
      * */
     if (server.repl_backlog == NULL) createReplicationBacklog();
     serverLog(LL_NOTICE, "MASTER <-> REPLICA sync: Finished with success");
@@ -2691,7 +2691,7 @@ char *sendSynchronousCommand(int flags, connection *conn, ...) {
 
     /* Read the reply from the server. 
      *
-     * 从服务器上读取回复。
+     * 从节点上读取回复。
      * */
     if (flags & SYNC_CMD_READ) {
         char buf[256];
@@ -2808,7 +2808,7 @@ int slaveTryPartialResynchronization(connection *conn, int read_reply) {
          *
          * 最初将master_initial_offset设置为-1，以将当前主replid和offset标记为无效。
          * 稍后，如果我们能够使用PSYNC命令进行FULL重新同步，我们将把偏移量设置为正确的值，
-         * 这样这些信息将传播到表示主服务器的客户端结构server.master中。
+         * 这样这些信息将传播到表示主节点的客户端结构server.master中。
          * */
         server.master_initial_offset = -1;
 
@@ -3936,8 +3936,8 @@ void replicationCacheMaster(client *c) {
  * current offset if no data was lost during the failover. So we use our
  * current replication ID and offset in order to synthesize a cached master. 
  *
- * 当一个主服务器被转换为一个从服务器时，会调用此函数，以便为新客户端从头开始创建一
- * 个缓存的主服务器，这将允许在故障转移后将被提升为新主服务器的从服务器进行PSYNC。
+ * 当一个主节点被转换为一个从节点时，会调用此函数，以便为新客户端从头开始创建一
+ * 个缓存的主节点，这将允许在故障转移后将被提升为新主节点的从节点进行PSYNC。
  * 假设此节点以前是新主节点的主节点，则新主节点将接受其复制ID，如果在故障转移期间
  * 没有丢失数据，则可能还会接受当前偏移量。因此，我们使用当前的复制ID和偏移量来合
  * 成缓存的master。
@@ -4396,7 +4396,7 @@ void processClientsWaitingReplicas(void) {
 /* Return the slave replication offset for this instance, that is
  * the offset for which we already processed the master replication stream. 
  *
- * 返回此节点的从节点复制偏移量，即我们已经处理了主复制流的偏移量。
+ * 返回此节点的复制偏移量，即我们已经处理了主节点复制流的偏移量。
  * */
 long long replicationGetSlaveOffset(void) {
     long long offset = 0;
@@ -4461,7 +4461,7 @@ void replicationCron(void) {
 
     /* Timed out master when we are an already connected slave? 
      *
-     * 当我们是一个已经连接的从节点服务器时，主服务器超时？
+     * 当我们是一个已经连接的从节点服务器时，主节点超时？
      * */
     // 如果是从节点 && 已经成功建立了连接 && 离上次交互的时间超过了超时时间
     if (server.masterhost && server.repl_state == REPL_STATE_CONNECTED &&
@@ -4557,7 +4557,7 @@ void replicationCron(void) {
      * 第二，在预同步阶段向所有从节点发送一条换行符，即等待主节点创建RDB文件的从节点。
      *
      * 如果我们失去了与主节点的连接，也要向我们所有的被锁住的从节点发送一条换行符，让从节点知道他
-     * 们的主节点在线。这是必要的，因为子从节点服务器只接收来自顶级主服务器的代理数据，因此
+     * 们的主节点在线。这是必要的，因为子从节点服务器只接收来自顶级主节点的代理数据，因此
      * 没有显式ping以避免更改复制偏移。可以发送这种特殊的带外ping（换行），它们对偏移量没有影响。
      *
      * 换行符将被从节点忽略，但会刷新最后一个交互计时器以防止超时。在这种情况下，我们忽略ping周期，
@@ -4626,10 +4626,10 @@ void replicationCron(void) {
      * backlog, in order to reply to PSYNC queries if they are turned into
      * masters after a failover. 
      *
-     * 如果这是一个没有连接从节点服务器的主服务器，并且有一个活动的同步缓冲区，为了回收内存，
+     * 如果这是一个没有连接从节点服务器的主节点，并且有一个活动的同步缓冲区，为了回收内存，
      * 我们可以在一段（配置的）时间后释放它。请注意，这不能用于从节点服务器：没有连接子
      * 从节点服务器的从节点服务器仍应将数据累积到缓冲区中，以便在故障转移后将PSYNC查询转
-     * 换为主服务器时对其进行回复。
+     * 换为主节点时对其进行回复。
      * */
     if (listLength(server.slaves) == 0 && server.repl_backlog_time_limit &&
         server.repl_backlog && server.masterhost == NULL)
@@ -4663,7 +4663,7 @@ void replicationCron(void) {
              *
              * 3.作为主控，我们收到了一些更新，这些更新不会增加主控_repl_offset。
              *
-             * 4.后来我们变成了一个从服务器，连接到新的主节点，该主节点将通过第二个复制ID接受我们的PSYNC请求，但由于我们
+             * 4.后来我们变成了一个从节点，连接到新的主节点，该主节点将通过第二个复制ID接受我们的PSYNC请求，但由于我们
              *   收到了写入，因此会出现数据不一致。
              * */
             changeReplicationId();

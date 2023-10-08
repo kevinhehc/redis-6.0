@@ -2921,7 +2921,7 @@ int clusterProcessPacket(clusterLink *link) {
         /* Manual failover requested from slaves. Initialize the state
          * accordingly. 
          *
-         * 从服务器请求手动故障转移。相应地初始化状态。
+         * 从节点请求手动故障转移。相应地初始化状态。
          * */
         resetManualFailover();
         server.cluster->mf_end = now + CLUSTER_MF_TIMEOUT;
@@ -3927,7 +3927,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * size + 1 
      *
      * 如果我们不是服务于至少1个插槽的主节点，我们就没有投票权，
-     * 因为Redis cluster中的集群大小是服务于至少一个插槽的主服务器数量，
+     * 因为Redis cluster中的集群大小是服务于至少一个插槽的主节点数量，
      * quorum是集群大小+1
      * */
     if (nodeIsSlave(myself) || myself->numslots == 0) return;
@@ -4591,7 +4591,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
 
         /* Check number of working slaves. 
          *
-         * 检查工作从属设备的数量。
+         * 检查工作从节点的数量。
          * */
         if (nodeIsMaster(node)) okslaves = clusterCountNonFailingSlaves(node);
         if (okslaves > 0) is_orphaned = 0;
@@ -4687,7 +4687,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * 2）从节点向主节点发送MFSTART消息，请求暂停客户端两次手动故障转移超时 CLUSTER_MF_TIMEOUT。
  *    当master 暂停进行手动故障转移时，它也开始用 CLUSTERMSG_FLAG0_PAUSED 标记数据包。
  *
- * 3） 从服务器等待主节点发送其标记为PAUSED的复制偏移量。
+ * 3） 从节点等待主节点发送其标记为PAUSED的复制偏移量。
  *
  * 4） 如果slave从master接收到偏移量，并且偏移量匹配，则mf_can_start设置为1，
  *     clusterHandleSlaveFailover（）将照常执行故障转移，不同的是，投票请求将被修改，
@@ -5434,7 +5434,7 @@ void clusterUpdateState(void) {
      *
      * 如果这是一个主节点，请等待一段时间，然后将状态变为OK，因为在重新启动后，以可写
      * 主节点的身份重新加入集群，而不给集群重新配置此节点的机会，这不是一个好主意。请注
-     * 意，延迟是从第一次调用该函数开始计算的，而不是从服务器启动开始计算的。
+     * 意，延迟是从第一次调用该函数开始计算的，而不是从节点启动开始计算的。
      * */
     if (first_call_time == 0) first_call_time = mstime();
     if (nodeIsMaster(myself) &&
@@ -6482,7 +6482,7 @@ NULL
          * Slaves can switch to another master without issues. 
          *
          * 如果节点当前是主节点，那么它应该没有分配的插槽或键来接受以复制其他节点。从属服
-         * 务器可以毫无问题地切换到另一个主服务器。
+         * 务器可以毫无问题地切换到另一个主节点。
          * */
         if (nodeIsMaster(myself) &&
             (myself->numslots != 0 || dictSize(server.db[0].dict) != 0)) {

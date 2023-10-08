@@ -325,7 +325,7 @@ int pubsubUnsubscribePattern(client *c, robj *pattern, int notify) {
         listDelNode(c->pubsub_patterns,ln);
         pat.client = c;
         pat.pattern = pattern;
-        // 从服务器中移除这个 pattern ,O(N)
+        // 从节点中移除这个 pattern ,O(N)
         ln = listSearchKey(server.pubsub_patterns,&pat);
         listDelNode(server.pubsub_patterns,ln);
         /* Remove the client from the pattern -> clients list hash table */

@@ -807,7 +807,7 @@ int freeMemoryIfNeeded(void) {
              * transmission here inside the loop. 
              *
              * 当要释放的内存开始足够大时，我们可能会开始在这里花费太多时间，以至于无法足够快地
-             * 将数据传输到从属设备，所以我们强制在环路内进行传输。
+             * 将数据传输到从节点，所以我们强制在环路内进行传输。
              * */
             if (slaves) flushSlavesOutputBuffers();
 

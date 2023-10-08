@@ -451,16 +451,18 @@ typedef struct clusterState {
      * */
     clusterNode *mf_slave;      /* Slave performing the manual failover. 
                                  *
-                                 * 执行手动故障切换的从属设备。
+                                 * 执行手动故障切换的从节点。
                                  * */
     /* Manual failover state of slave. 
      *
      * 从节点的手动故障转移状态。
      * */
     long long mf_master_offset; /* Master offset the slave needs to start MF
-                                   or zero if still not received. 
+                                 *  or zero if still not received.
                                  *
-                                 * 主节点偏移-从节点需要启动MF或零（如果仍未收到）。
+                                 * 手动故障转移的时候，主节点告诉从节点，主节点在这个偏移进行了暂停
+                                 *
+                                 * 或零（如果仍未收到）。
                                  * */
     int mf_can_start;           /* If non-zero signal that the manual failover
                                    can start requesting masters vote. 

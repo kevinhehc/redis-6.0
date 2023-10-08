@@ -2068,7 +2068,7 @@ int rewriteAppendOnlyFile(char *filename) {
      * it should reply ASAP, but just in case we lose its reply, we are sure
      * the child will eventually get terminated. 
      *
-     * 我们使用10秒的超时时间从服务器读取ACK。通常情况下，它应该尽快回复，但为了防
+     * 我们使用10秒的超时时间从节点读取ACK。通常情况下，它应该尽快回复，但为了防
      * 止我们失去回复，我们确信子进程最终会被终止。
      * */
     if (syncRead(server.aof_pipe_read_ack_from_parent,&byte,1,5000) != 1 ||

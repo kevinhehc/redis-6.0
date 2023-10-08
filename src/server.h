@@ -701,7 +701,7 @@ extern int configOOMScoreAdjValuesDefaults[CONFIG_OOM_COUNT];
 /* Slave replication state. Used in server.repl_state for slaves to remember
  * what to do next. 
  *
- * 从节点复制状态。在server.repl_state中用于从服务器，以便记住下一步
+ * 从节点复制状态。在server.repl_state中用于从节点，以便记住下一步
  * 要做什么。
  * */
 #define REPL_STATE_NONE 0 /* No active replication 
@@ -2250,7 +2250,7 @@ struct redisMemOverhead {
  * 文件来实现附加功能。
  *
  * 目前，唯一的用途是在加载时选择一个DB，这在复制中很有用，以
- * 确保链接的从服务器（从服务器的从服务器）选择正确的DB，并能够接受来自顶级主服务
+ * 确保链接的从节点（从节点的从节点）选择正确的DB，并能够接受来自顶级主服务
  * 器的流。
  * */
 typedef struct rdbSaveInfo {
@@ -3265,7 +3265,7 @@ struct redisServer {
     
     int repl_diskless_sync;             /* 主控将RDB直接发送到从节点套接字。 Master send RDB to slaves sockets directly. */
     
-    int repl_diskless_load;             /* 从服务器直接从套接字解析RDB。请参阅  REPL_DISKLESS_LOAD_* enum
+    int repl_diskless_load;             /* 从节点直接从套接字解析RDB。请参阅  REPL_DISKLESS_LOAD_* enum
                                          * Slave parse RDB directly from the socket.see REPL_DISKLESS_LOAD_* enum */
     
     int repl_diskless_sync_delay;       /* 延迟启动无盘repl BGSAVE。 Delay to start a diskless repl BGSAVE. */

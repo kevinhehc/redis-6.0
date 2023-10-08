@@ -2653,7 +2653,7 @@ extern int ProcessingEventsWhileBlocked;
  * 会调用此函数。
  *
  * 注意：此函数（当前）是从两个函数调用的：
- * 1。aeMain-主服务器循环
+ * 1。aeMain-主节点循环
  * 2。processEventsWhileBlocked-在RDB/AOF加载期间处理客户端
  *
  * 如果它是从processEventsWhileBlocked调用的，我们不想执行所有操作（例如，我们不希望键过期），

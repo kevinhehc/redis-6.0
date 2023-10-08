@@ -1463,7 +1463,7 @@ static void freeClientArgv(client *c) {
  * when we resync with our own master and want to force all our slaves to
  * resync with us as well.
  *
- * 关闭所有从属连接。当我们与自己的主服务器重新同步并希望强制所有从属服务器也与我们
+ * 关闭所有从属连接。当我们与自己的主节点重新同步并希望强制所有从属服务器也与我们
  * 重新同步时，这在链式复制中非常有用。*/
 void disconnectSlaves(void) {
     listIter li;
@@ -1623,7 +1623,7 @@ void freeClient(client *c) {
 
     /* Log link disconnection with slave
      *
-     * 日志链接断开与从属设备的连接*/
+     * 日志链接断开与从节点的连接*/
     if (getClientType(c) == CLIENT_TYPE_SLAVE) {
         serverLog(LL_WARNING,"Connection with replica %s lost.",
             replicationGetSlaveName(c));
@@ -2148,7 +2148,7 @@ int processInlineBuffer(client *c) {
      * This is useful for a slave to ping back while loading a big
      * RDB file.
      *
-     * 来自从属设备的换行符可用于刷新上次ACK时间。这对于从节点在加载大型RDB文件时进
+     * 来自从节点的换行符可用于刷新上次ACK时间。这对于从节点在加载大型RDB文件时进
      * 行ping返回非常有用。*/
     if (querylen == 0 && getClientType(c) == CLIENT_TYPE_SLAVE)
         c->repl_ack_time = server.unixtime;
@@ -2464,7 +2464,7 @@ int processMultibulkBuffer(client *c) {
  *
  * 1.除非有理由避免重置客户端，否则客户端将重置。
  * 2.对于主客户端，将更新复制偏移量。
- * 3.将我们从主服务器获得的命令传播到副本。
+ * 3.将我们从主节点获得的命令传播到副本。
  *
  * */
 void commandProcessed(client *c) {
@@ -3850,7 +3850,7 @@ void flushSlavesOutputBuffers(void) {
  * 将客户端暂停至指定的 unixtime（以毫秒为单位）。
  * 暂停客户端时，不会处理来自客户端的命令，因此在此期间无法更改数据集。
  * 但是，当此功能暂停普通客户端和 Pub/Sub 客户端时，仍会为从属服务器提供服务，
- * 因此此功能可用于服务器升级，其中要求从属服务器在转到主服务器之前处理复制流中的最新字节。
+ * 因此此功能可用于服务器升级，其中要求从属服务器在转到主节点之前处理复制流中的最新字节。
  * Redis 集群内部也使用此函数执行由集群故障转移实现的手动故障转移过程。
  * 该函数始终成功，即使已经有暂停正在进行中也是如此。
  * 在这种情况下，如果持续时间超过上一个持续时间的剩余时间，则暂停时间会延长。
