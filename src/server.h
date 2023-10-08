@@ -3554,6 +3554,7 @@ struct redisServer {
     int cluster_slave_validity_factor; /* Slave max data age for failover. 
                                         *
                                         * 从节点故障切换的最大数据使用期限。
+                                        * 默认值=10
                                         * */
     int cluster_require_full_coverage; /* If true, put the cluster down if
                                           there is at least an uncovered slot.
@@ -3580,10 +3581,12 @@ struct redisServer {
     int cluster_module_flags;      /* Set of flags that Redis modules are able
                                       to set in order to suppress certain
                                       native Redis Cluster features. Check the
-                                      REDISMODULE_CLUSTER_FLAG_*. 
+                                      REDISMODULE_CLUSTER_FLAG_*.
+
+                                      默认是 CLUSTER_MODULE_FLAG_NONE
+                                      代码「server.cluster_module_flags = CLUSTER_MODULE_FLAG_NONE;」
                                     *
-                                    * Redis模块可以设置的一组标志，以抑制某些本机Redis群集功能。检查REDI
-                                    * SMODULE_CLUSTER_FLAG_*。
+                                    * Redis模块可以设置的一组标志，以抑制某些本机Redis群集功能。检查REDISMODULE_CLUSTER_FLAG_*。
                                     * */
     int cluster_allow_reads_when_down; /* Are reads allowed when the cluster
                                         is down? 

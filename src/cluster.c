@@ -3241,8 +3241,8 @@ void clusterSendMessage(clusterLink *link, unsigned char *msg, size_t msglen) {
  * some node->link to be invalidated, so it is safe to call this function
  * from event handlers that will do stuff with node links later. 
  *
- * 向具有连接链路的集群中的所有节点发送消息。可以保证该函数永远不会对某些节点->链
- * 接产生副作用，因此可以安全地从稍后处理节点链接的事件处理程序中调用该函数。
+ * 向具有连接链路的集群中的所有节点发送消息。可以保证该函数永远不会对某些节点->链接产生副作用，
+ * 因此可以安全地从稍后处理节点链接的事件处理程序中调用该函数。
  * */
 void clusterBroadcastMessage(void *buf, size_t len) {
     dictIterator *di;
@@ -3625,11 +3625,13 @@ void clusterSendPing(clusterLink *link, int type) {
  * CLUSTER_BROADCAST_LOCAL_SLAVES -> All slaves in my master-slaves ring.
  
  *
- * 向每个未处于握手状态并且我们有有效链路的连接节点发送PONG数据包。在Redis
- * 中，集群端口不仅用于故障检测，还用于承载重要的配置信息。因此，当配置发生变化时，
- * 广播pong是有用的，我们希望尽快让集群知道（例如，在从属升级之后）。“target”参数使用以下定义指定接收节点：
- * CLUSTER_BROADCAST_ALL->所有已知节点。CLUSTER_BROADCAT_LOCAL_SLAVES->我
- * 的主从属环中的所有从属环。
+ * 向每个未处于握手状态并且我们有有效链路的连接节点发送PONG数据包。在Redis中，
+ * 集群端口不仅用于故障检测，还用于承载重要的配置信息。因此，当配置发生变化时，
+ * 广播pong是有用的，我们希望尽快让集群知道（例如，在从属升级之后）。
+ *
+ * “target”参数使用以下定义指定接收节点：
+ *  CLUSTER_BROADCAST_ALL-> 所有已知节点。
+ *  CLUSTER_BROADCAT_LOCAL_SLAVES-> 是我的从节点 或者 和我是同一个主节点之下。
  * */
 #define CLUSTER_BROADCAST_ALL 0
 #define CLUSTER_BROADCAST_LOCAL_SLAVES 1
@@ -3645,7 +3647,11 @@ void clusterBroadcastPong(int target) {
         if (node == myself || nodeInHandshake(node)) continue;
         if (target == CLUSTER_BROADCAST_LOCAL_SLAVES) {
             int local_slave =
-                nodeIsSlave(node) && node->slaveof &&
+                // 是从节点
+                nodeIsSlave(node) &&
+                // 有归属的主节点
+                node->slaveof &&
+                // 是我的从节点 或者 和我是同一个主节点之下
                 (node->slaveof == myself || node->slaveof == myself->slaveof);
             if (!local_slave) continue;
         }
@@ -3709,11 +3715,11 @@ void clusterSendPublish(clusterLink *link, robj *channel, robj *message) {
  * The FAIL message is sent when we detect that a node is failing
  * (CLUSTER_NODE_PFAIL) and we also receive a gossip confirmation of this:
  * we switch the node state to CLUSTER_NODE_FAIL and ask all the other
- * nodes to do the same ASAP. 
+ * nodes to do the same ASAP.
  *
- * 向我们能够联系的所有节点发送FAIL消息。当我们检测到一个节点出现故障时，就会发
- * 送FAIL消息（CLUSTER_node_PFAIL），并且我们还会收到对此的gossip确认：我们将节点状态切换到CLUSTER-node_FAIL，并要求所有其他节
- * 点尽快执行相同操作。
+ * 向我们能够联系的所有节点发送FAIL消息。
+ * 当我们检测到一个节点出现故障时，就会发送FAIL消息（CLUSTER_NODE_PFAIL），
+ * 并且我们还会收到对此的gossip确认：我们将节点状态切换到 CLUSTER_NODE_FAIL，并要求所有其他节点尽快执行相同操作。
  * */
 void clusterSendFail(char *nodename) {
     clusterMsg buf[1];
@@ -3728,8 +3734,8 @@ void clusterSendFail(char *nodename) {
  * slots configuration. The node name, slots bitmap, and configEpoch info
  * are included. 
  *
- * 向携带指定“node”插槽配置的指定链接发送UPDATE消息。包括节点名称、插槽
- * 位图和configEpoch信息。
+ * 对指定的 Link 发送 node 的 UPDATE 消息，
+ * 包括节点名称、插槽位图和configEpoch信息。
  * */
 void clusterSendUpdate(clusterLink *link, clusterNode *node) {
     clusterMsg buf[1];
@@ -3797,10 +3803,16 @@ void clusterSendModule(clusterLink *link, uint64_t module_id, uint8_t type,
  * returned. 
  *
  * 此函数获取一个集群节点ID字符串作为目标，与模块端表示节点地址的方式相同，解析节
- * 点并发送消息。如果目标为NULL，则广播消息。如果目标有效，则函数返回C_OK，
- * 否则返回C_ERR。
+ * 点并发送消息。如果目标为NULL，则广播消息。
+ *
+ * 如果目标有效，则函数返回C_OK，否则返回C_ERR。
  * */
-int clusterSendModuleMessageToTarget(const char *target, uint64_t module_id, uint8_t type, unsigned char *payload, uint32_t len) {
+int clusterSendModuleMessageToTarget(const char *target,
+                                     uint64_t module_id,
+                                     uint8_t type,
+                                     unsigned char *payload,
+                                     uint32_t len
+                                     ) {
     clusterNode *node = NULL;
 
     if (target != NULL) {
@@ -3820,9 +3832,10 @@ int clusterSendModuleMessageToTarget(const char *target, uint64_t module_id, uin
  * cluster. In the future we'll try to get smarter and avoiding propagating those
  * messages to hosts without receives for a given channel.
 
- * CLUSTERPub/Sub支持目前我们只做很少的工作，只是在整个集群中传播PUBLI
- * SH消息。在未来，我们将努力变得更智能，避免在没有接收到给定频道的情况下将这些消
- * 息传播到主节点
+ * CLUSTER Pub/Sub 支持
+ *
+ * 目前我们只做很少的工作，只是在整个集群中传播PUBLISH消息。
+ * 在未来，我们将努力变得更智能，避免在没有接收到给定频道的情况下将这些消息传播到主节点
  * */
 void clusterPropagatePublish(robj *channel, robj *message) {
     clusterSendPublish(NULL, channel, message);
@@ -3833,15 +3846,16 @@ void clusterPropagatePublish(robj *channel, robj *message) {
  * SLAVE节点特定功能
  * --------------------------------------------------------------------------*/
 
-/* This function sends a FAILOVE_AUTH_REQUEST message to every node in order to
+/* This function sends a FAILOVER_AUTH_REQUEST message to every node in order to
  * see if there is the quorum for this slave instance to failover its failing
  * master.
  *
  * Note that we send the failover request to everybody, master and slave nodes,
  * but only the masters are supposed to reply to our query. 
  *
- * 此函数向每个节点发送FAILOVE_AUTH_REQUEST消息，以查看此从属实
- * 例是否有仲裁来故障转移其发生故障的主节点。请注意，我们将故障转移请求发送给每个人,
+ * 此函数向每个节点发送FAILOVER_AUTH_REQUEST消息，来获取 故障转移的选票。
+ *
+ * 请注意，我们将故障转移请求发送给每个人,
  * 包括主节点和从节点，但只有主节点应该回复我们的查询。
  * */
 void clusterRequestFailoverAuth(void) {
@@ -3855,7 +3869,7 @@ void clusterRequestFailoverAuth(void) {
      * they should authorized the failover even if the master is working. 
      *
      * 如果这是手动故障转移，请在标头中设置CLUSTERMSG_FLAG0_FORCHECK位，以便与接收到消息的节点进行通信，
-     * 即即使主节点正在工作，它们也应该授权故障转移。
+     * 即 即使主节点正在工作，它们也应该授权故障转移。
      * */
     if (server.cluster->mf_end) hdr->mflags[0] |= CLUSTERMSG_FLAG0_FORCEACK;
     totlen = sizeof(clusterMsg)-sizeof(union clusterMsgData);
@@ -3924,8 +3938,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * request, if the request epoch was greater. 
      *
      * 请求epoch必须>=我们的当前epoch。请注意，如果请求epoch更大，那么
-     * 它实际上不可能更大，因为我们的currentEpoch是作为接收此请求的副作用而
-     * 更新的。
+     * 它实际上不可能更大，因为我们的currentEpoch是作为接收此请求的副作用而更新的。
      * */
     if (requestCurrentEpoch < server.cluster->currentEpoch) {
         serverLog(LL_WARNING,
@@ -4232,6 +4245,7 @@ void clusterFailoverReplaceYourMaster(void) {
  * 3） 执行故障转移，通知所有其他节点。
  * */
 void clusterHandleSlaveFailover(void) {
+    // data_age 是指当前数据与主节点同步的间隔，如果间隔太大，就不符合故障转移了
     mstime_t data_age;
     mstime_t auth_age = mstime() - server.cluster->failover_auth_time;
     int needed_quorum = (server.cluster->size / 2) + 1;
@@ -4265,10 +4279,10 @@ void clusterHandleSlaveFailover(void) {
      * 4) It is serving slots. 
      *
      * 运行功能的先决条件，在自动或手动故障切换的情况下都必须满足：
-     * 1）我们是从节点。
-     * 2）我们的主节点被标记为FAIL，或者这是手动故障转移。
-     * 3） 我们没有无故障切换配置集，而且这不是手动故障切换。
-     * 4） 它正在提供插槽。
+     * 1） 我们是从节点。
+     * 2） 我们的主节点被标记为FAIL，或者这是手动故障转移。
+     * 3） 我们没有故障切换配置，而且这不是手动故障切换。
+     * 4） 它有提供插槽。
      * */
     if (nodeIsMaster(myself) ||
         myself->slaveof == NULL ||
@@ -4311,8 +4325,9 @@ void clusterHandleSlaveFailover(void) {
      *
      * Check bypassed for manual failovers. 
      *
-     * 根据用户配置的从节点有效性因素，检查我们的数据是否足够新。检查旁路是否存在手动故障
-     * 切换。
+     * 根据用户配置的从节点有效性因素，检查我们的数据是否足够新。检查旁路是否存在手动故障切换。
+     *
+     * 如果 data_age 间隔太大，就不符合故障转移了
      * */
     if (server.cluster_slave_validity_factor &&
         data_age >
@@ -4347,8 +4362,7 @@ void clusterHandleSlaveFailover(void) {
          * Specifically 1 second * rank. This way slaves that have a probably
          * less updated replication offset, are penalized. 
          *
-         * 我们添加了另一个与从属等级成比例的延迟。特别是1秒的排名。这样，更新复制偏移量可
-         * 能较少的从节点就会受到惩罚。
+         * 我们添加了另一个与从属等级成比例的延迟。特别是1秒的排名。这样，更新复制偏移量可能较少的从节点就会受到惩罚。
          * */
         server.cluster->failover_auth_time +=
             server.cluster->failover_auth_rank * 1000;
@@ -4371,8 +4385,7 @@ void clusterHandleSlaveFailover(void) {
          * to all the other slaves so that they'll updated their offsets
          * if our offset is better. 
          *
-         * 既然我们已经安排好了选举，就把我们的补偿广播给所有其他从节点，这样如果我们的补偿更
-         * 好，他们就会更新他们的补偿。
+         * 既然我们已经安排好了选举，就把我们的补偿广播给所有其他从节点，这样如果我们的补偿更好，他们就会更新他们的补偿。
          * */
         clusterBroadcastPong(CLUSTER_BROADCAST_LOCAL_SLAVES);
         return;
@@ -4516,6 +4529,9 @@ void clusterHandleSlaveFailover(void) {
  * */
 void clusterHandleSlaveMigration(int max_slaves) {
     int j, okslaves = 0;
+    // mymaster 我目前的主节点
+    // target 想要成为target节点的从节点
+    // candidate 要进行迁移的候选人
     clusterNode *mymaster = myself->slaveof, *target = NULL, *candidate = NULL;
     dictIterator *di;
     dictEntry *de;
@@ -4594,7 +4610,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
          * to a master with the maximum number of slaves and with the smallest
          * node ID. 
          *
-         * 检查我是否是迁移的从属候选者：连接到具有最大从属数量和最小节点ID的主节点。
+         * 检查我是否是迁移的从属候选者：连接到具有最大从属数量和「最小节点ID」的主节点。
+         * 「最小节点ID」指的是名字。
          * */
         if (okslaves == max_slaves) {
             for (j = 0; j < node->numslaves; j++) {
@@ -4615,9 +4632,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
      * the natural slaves of this instance to advertise their switch from
      * the old master to the new one. 
      *
-     * 步骤4：如果有目标，并且我是候选，则执行迁移，但前提是主节点持续孤立几秒钟，这样
-     * 在故障切换期间，我们会给这个节点的自然从节点一些时间，让它们从旧主节点切换到新
-     * 主节点。
+     * 步骤4：如果有目标，并且我是候选，则执行迁移，但前提是主节点持续孤立几秒钟，
+     * 这样在故障切换期间，我们会给这个节点的自然从节点一些时间，让它们从旧主节点切换到新主节点。
      * */
     if (target && candidate == myself &&
         (mstime()-target->orphaned_time) > CLUSTER_SLAVE_MIGRATION_DELAY &&
