@@ -329,6 +329,7 @@ typedef struct clusterNode {
     mstime_t ping_sent;      /* Unix time we sent latest ping 
                               *
                               * Unix时间我们发送了最新的ping
+                              * 如果已经收到PONG，那么node->ping_sent为零
                               * */
     mstime_t pong_received;  /* Unix time we received the pong 
                               *
@@ -441,7 +442,7 @@ typedef struct clusterState {
     mstime_t mf_end;            /* Manual failover time limit (ms unixtime).
                                    It is zero if there is no MF in progress. 
                                  *
-                                 * 手动故障转移时间限制（ms-unixtime）。如果没有正在进行的手动故障转移，则为零。
+                                 * 手动故障转移限制的结束时间（ms-unixtime）。如果没有正在进行的手动故障转移，则为零。
                                  * */
     /* Manual failover state of master. 
      *

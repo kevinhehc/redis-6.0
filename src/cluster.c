@@ -561,7 +561,7 @@ int clusterLockConfig(char *filename) {
  * that may change at runtime via CONFIG SET. This function changes the
  * set of flags in myself->flags accordingly. 
  *
- * 一些标志（目前仅为NOFAILOVER标志）可能需要在“我自己”节点中根据节点的
+ * 一些标志（目前仅为NOFAILOVER标志）可能需要在 myself 节点中根据节点的
  * 当前配置进行更新，这可能会在运行时通过CONFIG SET进行更改。此函数相应地
  * 更改myself->标志中的标志集。
  * */
@@ -1425,7 +1425,7 @@ uint64_t clusterGetMaxEpoch(void) {
  * 
  * 1）导入后关闭插槽时。否则，重新发货的成本太高。
  * 
- * 2） 当调用CLUSTER FAILOVER时，即使没有能够创建新配置epoch的主机，也可以使用强制从节点对其主机进行故障切换的选项。
+ * 2） 当调用CLUSTER FAILOVER时，即使没有能够创建新配置epoch的主节点，也可以使用强制从节点对其主节点进行故障切换的选项。
  * 
  * Redis Cluster使用该功能不会爆炸，即使在该节点和另一个节点发生冲突的情况下，也
  * 不会单方面生成相同的配置历元，因为配置历元冲突解决算法最终会将冲突节点移动到不同
@@ -1510,10 +1510,10 @@ int clusterBumpConfigEpochWithoutConsensus(void) {
  * 
  * 此冲突解决代码允许节点在自动启动时自动以不同的configEpoch结束。在所
  * 有情况下，我们都希望有一个自动解决这个问题的机制作为保障。为不同的插槽集提供服务
- * 的主机使用相同的配置epoch是无害的，但如果节点由于某种原因（手动错误或软件错
+ * 的主节点使用相同的配置epoch是无害的，但如果节点由于某种原因（手动错误或软件错
  * 误）而在没有适当的故障转移过程的情况下结束为相同的插槽提供服务，则是有害的。
  * 
- * 总的来说，我们希望一个系统最终总是以不同的主机结束，无论发生什么，都有不同的配置时期，
+ * 总的来说，我们希望一个系统最终总是以不同的主节点结束，无论发生什么，都有不同的配置时期，
  * 因为在分布式系统中，没有什么比大脑分裂更糟糕的了。行为当调用此函数时，如果与具
  * 有冲突epoch的另一个节点（“sender”节点）相比，此节点的node ID
  * 在字典上更小，则它将为自己分配当前在节点中检测到的最大配置epoch加1。
@@ -1683,7 +1683,7 @@ int clusterBlacklistExists(char *nodeid) {
  *
  * 此功能检查给定节点是否应标记为FAIL。如果满足以下条件，就会发生这种情况：
  * 
- * 1）我们通过gossip从其他主节点收到了足够多的故障报告。足够意味着大多数主机最近都发出了
+ * 1）我们通过gossip从其他主节点收到了足够多的故障报告。足够意味着大多数主节点最近都发出了
  *    节点关闭的信号。
  * 
  * 2）我们认为此节点处于PFAIL状态。如果检测到故障，我们还会通知整个集群该事件，
@@ -2118,7 +2118,7 @@ int nodeUpdateAddressIfNeeded(clusterNode *node, clusterLink *link,
     /* Check if this is our master and we have to change the
      * replication target as well. 
      *
-     * 检查这是否是我们的主机，我们还必须更改复制目标。
+     * 检查这是否是我们的主节点，我们还必须更改复制目标。
      * */
     if (nodeIsSlave(myself) && myself->slaveof == node)
         replicationSetMaster(node->ip, node->port);
@@ -2276,7 +2276,7 @@ void clusterUpdateSlotsConfigWith(clusterNode *sender, uint64_t senderConfigEpoc
      *
      * 如果至少有一个插槽从一个节点重新分配到另一个具有更大configEpoch的节点
      * ，则可能：
-     * 1）我们是一个没有插槽的主机。这意味着我们被失败了，我们应该变成新主节点的复制品。
+     * 1）我们是一个没有插槽的主节点。这意味着我们被失败了，我们应该变成新主节点的复制品。
      * 2） 我们是从节点，我们的主节点没有空位。我们需要复制到新的插槽所有者。
      * */
     if (newmaster && curmaster->numslots == 0) {
@@ -2782,12 +2782,12 @@ int clusterProcessPacket(clusterLink *link) {
          * failover if there are the conditions to win the election). 
          *
          * 2） 我们还检查了相反的条件，即发送方声称为我们知道由具有更大configEpo
-         * ch的主机提供服务的插槽提供服务。如果发生这种情况，我们会通知发件人。这很有用，
-         * 因为有时在分区修复后，重新出现的主机可能是最后一个声明给定哈希槽集的主机，但其他
+         * ch的主节点提供服务的插槽提供服务。如果发生这种情况，我们会通知发件人。这很有用，
+         * 因为有时在分区修复后，重新出现的主节点可能是最后一个声明给定哈希槽集的主节点，但其他
          * 节点知道其配置不推荐使用。示例：对于插槽1、2、3，A和B是主插槽和从插槽。A被
          * 瓜分了，B升职了。B被分区，A返回可用。通常，B会PING A发布其服务插槽集和
          * configEpoch，但由于分区的原因，B无法通知A新的配置，因此具有更新表的
-         * 其他节点必须这样做。这样，A将停止充当主机（或者，如果有条件赢得选举，可以尝试故
+         * 其他节点必须这样做。这样，A将停止充当主节点（或者，如果有条件赢得选举，可以尝试故
          * 障转移）。
          * */
         if (sender && dirty_slots) {
@@ -2897,7 +2897,7 @@ int clusterProcessPacket(clusterLink *link) {
          * a non zero number of slots, and its currentEpoch is greater or
          * equal to epoch where this node started the election. 
          *
-         * 只有当发送方是服务于非零数量插槽的主机，并且其当前epoch大于或等于该节点开始
+         * 只有当发送方是服务于非零数量插槽的主节点，并且其当前epoch大于或等于该节点开始
          * 选举的epoch时，我们才考虑此投票。
          * */
         if (nodeIsMaster(sender) && sender->numslots > 0 &&
@@ -3463,7 +3463,7 @@ void clusterSendPing(clusterLink *link, int type) {
      * 我们想增加多少gossip板块？节点数量的1/10，并且无论如何至少为3。为什么是1/10？
      * 如果我们有N个主节点，具有N/10个条目，并且我们认为在node_timeout中，
      * 我们与每个其他节点交换至少4个数据包（在最坏的情况下，我们在node_ttimeout/2时间内进行ping，
-     * 并且我们还从主机接收两次ping），那么在
+     * 并且我们还从主节点接收两次ping），那么在
      * node_timeout*2故障报告有效时间内，我们总共有8个数据包。因此，对于
      * 单个PFAIL节点，我们可以预期（在指定的时间窗口内）收到以下数量的故障报告：
      * PROB GOSSIP_ENTRIES_PER_PACKET TOTAL_PACKETS:PROB=在单个gossip条目中出现的概率，即1/NUM_of_NODES。
@@ -3822,7 +3822,7 @@ int clusterSendModuleMessageToTarget(const char *target, uint64_t module_id, uin
 
  * CLUSTERPub/Sub支持目前我们只做很少的工作，只是在整个集群中传播PUBLI
  * SH消息。在未来，我们将努力变得更智能，避免在没有接收到给定频道的情况下将这些消
- * 息传播到主机
+ * 息传播到主节点
  * */
 void clusterPropagatePublish(robj *channel, robj *message) {
     clusterSendPublish(NULL, channel, message);
@@ -3855,7 +3855,7 @@ void clusterRequestFailoverAuth(void) {
      * they should authorized the failover even if the master is working. 
      *
      * 如果这是手动故障转移，请在标头中设置CLUSTERMSG_FLAG0_FORCHECK位，以便与接收到消息的节点进行通信，
-     * 即即使主机正在工作，它们也应该授权故障转移。
+     * 即即使主节点正在工作，它们也应该授权故障转移。
      * */
     if (server.cluster->mf_end) hdr->mflags[0] |= CLUSTERMSG_FLAG0_FORCEACK;
     totlen = sizeof(clusterMsg)-sizeof(union clusterMsgData);
@@ -3912,7 +3912,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * of masters serving at least one slot, and quorum is the cluster
      * size + 1 
      *
-     * 如果我们不是服务于至少1个插槽的主机，我们就没有投票权，
+     * 如果我们不是服务于至少1个插槽的主节点，我们就没有投票权，
      * 因为Redis cluster中的集群大小是服务于至少一个插槽的主服务器数量，
      * quorum是集群大小+1
      * */
@@ -3952,7 +3952,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * The master can be non failing if the request is flagged
      * with CLUSTERMSG_FLAG0_FORCEACK (manual failover). 
      *
-     * 节点必须是从节点，并且其主节点已关闭。如果使用CLUSTERMSG_FLAG0_FORCECK（手动故障转移）标记请求，则主机可能不会失败。
+     * 节点必须是从节点，并且其主节点已关闭。如果使用CLUSTERMSG_FLAG0_FORCECK（手动故障转移）标记请求，则主节点可能不会失败。
      * */
     if (nodeIsMaster(node) || master == NULL ||
         (!nodeFailed(master) && !force_ack))
@@ -3996,7 +3996,7 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
      * slots in the current configuration. 
      *
      * 请求投票的从节点必须为声明的插槽具有一个configEpoch，该插槽>=当前配置
-     * 中为相同插槽提供服务的主机之一。
+     * 中为相同插槽提供服务的主节点之一。
      * */
     for (j = 0; j < CLUSTER_SLOTS; j++) {
         if (bitmapTestBit(claimed_slots, j) == 0) continue;
@@ -4046,8 +4046,8 @@ void clusterSendFailoverAuthIfNeeded(clusterNode *node, clusterMsg *request) {
  * get voted and replace a failing master. Slaves with better replication
  * offsets are more likely to win. 
  *
- * 此函数返回此节点（从节点）在其主从环上下文中的“等级”。从节点的级别由同一主机的其他
- * 从节点的数量给定，这些从节点与本地主机相比具有更好的复制偏移量（更好意味着更大，因此
+ * 此函数返回此节点（从节点）在其主从环上下文中的“等级”。从节点的级别由同一主节点的其他
+ * 从节点的数量给定，这些从节点与本地主节点相比具有更好的复制偏移量（更好意味着更大，因此
  * 它们要求更多的数据）。等级为0的从节点是具有最大（最新）复制偏移量的从节点,
  * 依此类推。请注意，由于等级是如何计算的，多个从设备可能具有相同的等级，以防它们具有
  * 相同的偏移。从节点等级用于增加开始选举的延迟，以便获得投票并替换失败的主节点。复制偏
@@ -4104,7 +4104,7 @@ int clusterGetSlaveRank(void) {
  * 1）无法启动故障转移的原因已更改。原因还包括一个NONE原因，当从设备
  * 发现其主设备正常时，我们将状态重置为NONE（无FAIL标志）。
  * 
- * 2） 此外，如果主机仍然关闭，并且没有故障转移的原因仍然相同，但超过CLUSTER_CANT_F
+ * 2） 此外，如果主节点仍然关闭，并且没有故障转移的原因仍然相同，但超过CLUSTER_CANT_F
  * AILOVER_RELOG_PERIOD秒，则会再次发出日志。
  * 
  * 3） 最后，该函数仅在从设备停机超过5秒+NODE_TIMEOUT时记录。这样，当故障转移在合理的
@@ -4131,7 +4131,7 @@ void clusterLogCantFailover(int reason) {
      * goal of this function is to log slaves in a stalled condition for
      * a long time. 
      *
-     * 如果主机不久前发生故障，我们也不会发出任何日志，该函数的目标是记录长期处于停滞状
+     * 如果主节点不久前发生故障，我们也不会发出任何日志，该函数的目标是记录长期处于停滞状
      * 态的从节点。
      * */
     if (myself->slaveof &&
@@ -4186,7 +4186,7 @@ void clusterFailoverReplaceYourMaster(void) {
 
     /* 2) Claim all the slots assigned to our master. 
      *
-     * 2） 申请分配给我们的主机的所有插槽。
+     * 2） 申请分配给我们的主节点的所有插槽。
      * */
     for (j = 0; j < CLUSTER_SLOTS; j++) {
         if (clusterNodeGetSlotBit(oldmaster,j)) {
@@ -4266,7 +4266,7 @@ void clusterHandleSlaveFailover(void) {
      *
      * 运行功能的先决条件，在自动或手动故障切换的情况下都必须满足：
      * 1）我们是从节点。
-     * 2）我们的主机被标记为FAIL，或者这是手动故障转移。
+     * 2）我们的主节点被标记为FAIL，或者这是手动故障转移。
      * 3） 我们没有无故障切换配置集，而且这不是手动故障切换。
      * 4） 它正在提供插槽。
      * */
@@ -4288,7 +4288,7 @@ void clusterHandleSlaveFailover(void) {
     /* Set data_age to the number of seconds we are disconnected from
      * the master. 
      *
-     * 将data_age设置为我们与主机断开连接的秒数。
+     * 将data_age设置为我们与主节点断开连接的秒数。
      * */
     if (server.repl_state == REPL_STATE_CONNECTED) {
         data_age = (mstime_t)(server.unixtime - server.master->lastinteraction)
@@ -4301,7 +4301,7 @@ void clusterHandleSlaveFailover(void) {
      * disconnected from our master at least for the time it was down to be
      * flagged as FAIL, that's the baseline. 
      *
-     * 从数据期限中删除节点超时，因为我们与主机断开连接是可以的，至少在它被标记为FAIL的时间内，这是基线。
+     * 从数据期限中删除节点超时，因为我们与主节点断开连接是可以的，至少在它被标记为FAIL的时间内，这是基线。
      * */
     if (data_age > server.cluster_node_timeout)
         data_age -= server.cluster_node_timeout;
@@ -4384,7 +4384,7 @@ void clusterHandleSlaveFailover(void) {
      *
      * Not performed if this is a manual failover. 
      *
-     * 由于我们计算了选举延迟，我们可能从同一主机的其他从节点那里收到了更多更新的偏移。如
+     * 由于我们计算了选举延迟，我们可能从同一主节点的其他从节点那里收到了更多更新的偏移。如
      * 果我们的排名发生变化，请更新延迟。如果这是手动故障切换，则不执行。
      * */
     if (server.cluster->failover_auth_sent == 0 &&
@@ -4447,7 +4447,7 @@ void clusterHandleSlaveFailover(void) {
     if (server.cluster->failover_auth_count >= needed_quorum) {
         /* We have the quorum, we can finally failover the master. 
          *
-         * 我们有了法定人数，我们终于可以对主机进行故障切换了。
+         * 我们有了法定人数，我们终于可以对主节点进行故障切换了。
          * */
 
         serverLog(LL_WARNING,
@@ -4506,12 +4506,12 @@ void clusterHandleSlaveFailover(void) {
  * Additional conditions for migration are examined inside the function.
  
  *
- * 此功能负责决定是否应将此复制副本迁移到另一个（孤立的）主机。只有当：
+ * 此功能负责决定是否应将此复制副本迁移到另一个（孤立的）主节点。只有当：
  * 1）我们是从节点时，clusterCron（）函数才会调用它。
- * 2） 检测到群集中至少有一个孤立主机。
+ * 2） 检测到群集中至少有一个孤立主节点。
  * 3） 我们是从节点数量最多的主节点之一的从节点。这些检查是由调用方执行的，因为
  * 它无论如何都需要迭代节点，所以如果确实需要的话，我们会花时间在clusterHandleSlaveMigration（）中。
- * 使用预先计算的max_slaves调用该函数，即单个主机的最大工作（不处于FAIL状态）从节点数量。迁移的附加条件在函
+ * 使用预先计算的max_slaves调用该函数，即单个主节点的最大工作（不处于FAIL状态）从节点数量。迁移的附加条件在函
  * 数中进行检查。
  * */
 void clusterHandleSlaveMigration(int max_slaves) {
@@ -4548,11 +4548,10 @@ void clusterHandleSlaveMigration(int max_slaves) {
      * slaves migrating at the same time), but this is unlikely to
      * happen, and harmless when happens. 
      *
-     * 步骤3：确定迁移的候选者，并检查在ok slave数量最多的master中，我是
-     * 否是节点ID最小的那个（“候选者slave”）。注意：这意味着最终会发生副本迁移，
-     * 因为可以再次访问的从节点总是会清除其FAIL标志，所以最终必须有一个候选者。
-     * 同时，这并不意味着不可能有种族条件（两个从节点同时迁移），但这不太可能发生，而且
-     * 发生时是无害的。
+     * 步骤3：确定迁移的候选者，并检查在ok slave数量最多的master中，我是否是节点ID最小的那个（“候选者slave”）。
+     *
+     * 注意：这意味着最终会发生副本迁移，因为可以再次访问的从节点总是会清除其FAIL标志，所以最终必须有一个候选者。
+     * 同时，这并不意味着不可能有种族条件（两个从节点同时迁移），但这不太可能发生，而且发生时是无害的。
      * */
     candidate = myself;
     di = dictGetSafeIterator(server.cluster->nodes);
@@ -4565,9 +4564,8 @@ void clusterHandleSlaveMigration(int max_slaves) {
          * (MIGRATE_TO flag). This way we only migrate to instances that were
          * supposed to have replicas. 
          *
-         * 只有当该主机正在工作、成为孤立主机并且曾经有从属主机时，或者如果故障转移到有从属
-         * 主机（migrate_to标志）时，我们才希望迁移。通过这种方式，我们只迁移到本
-         * 应具有副本的节点。
+         * 只有当该主节点正在工作、成为孤立主节点并且曾经有从属主节点时，或者如果故障转移到有从属
+         * 主节点（migrate_to标志）时，我们才希望迁移。通过这种方式，我们只迁移到本应具有副本的节点。
          * */
         if (nodeIsSlave(node) || nodeFailed(node)) is_orphaned = 0;
         if (!(node->flags & CLUSTER_NODE_MIGRATE_TO)) is_orphaned = 0;
@@ -4596,7 +4594,7 @@ void clusterHandleSlaveMigration(int max_slaves) {
          * to a master with the maximum number of slaves and with the smallest
          * node ID. 
          *
-         * 检查我是否是迁移的从属候选者：连接到具有最大从属数量和最小节点ID的主机。
+         * 检查我是否是迁移的从属候选者：连接到具有最大从属数量和最小节点ID的主节点。
          * */
         if (okslaves == max_slaves) {
             for (j = 0; j < node->numslaves; j++) {
@@ -4671,13 +4669,13 @@ void clusterHandleSlaveMigration(int max_slaves) {
  * 暂停进行手动故障转移时，它也开始用CLUSTERMSG_FLAG0_paused
  * 标记数据包。
  *
- * 3） 从服务器等待主机发送其标记为PAUSED的复制偏移量。
+ * 3） 从服务器等待主节点发送其标记为PAUSED的复制偏移量。
  *
  * 4） 如果slave从master接收到偏移量，并且偏移量匹配，则mf_can_start设置为1，
  * clusterHandleSlaveFailover（）将照常执行故
  * 障转移，不同的是，投票请求将被修改，以强制master投票给具有工作master
- * 的slave。从主机的角度来看，事情更简单：当接收到PAUSE_CLIENTS数
- * 据包时，主机也将mf_end和发送方设置在mf_slave中。在手动故障转移的时
+ * 的slave。从主节点的角度来看，事情更简单：当接收到PAUSE_CLIENTS数
+ * 据包时，主节点也将mf_end和发送方设置在mf_slave中。在手动故障转移的时
  * 间限制期间，主设备只会更频繁地向该从设备发送带有PAUSED标志的PING，以便
  * 从设备在接收到来自设置了该标志的主设备的数据包时设置mf_master_offset。
  * 手动故障切换的目标是执行快速故障切换，而不会因异步主从复制而导致数据丢失-
@@ -4766,7 +4764,8 @@ void clusterHandleManualFailover(void) {
 
 /* This is executed 10 times every second 
  *
- * 每秒执行10次
+ * 每秒执行10次，
+ * 100ms执行一次
  * */
 void clusterCron(void) {
     dictIterator *di;
@@ -4778,7 +4777,7 @@ void clusterCron(void) {
                            * */
     int max_slaves; /* Max number of ok slaves for a single master. 
                      *
-                     * 单个主机的ok从节点的最大数量。
+                     * 单个主节点的ok从节点的最大数量。
                      * */
     int this_slaves; /* Number of ok slaves for our master (if we are slave). 
                       *
@@ -4798,7 +4797,8 @@ void clusterCron(void) {
      * The option can be set at runtime via CONFIG SET, so we periodically check
      * if the option changed to reflect this into myself->ip. 
      *
-     * 我们想让自己->ip与集群公告ip选项同步。该选项可以在运行时通过CONFIG  SET 进行设置，
+     * 我们想让 myself->ip 与 cluster-announce-ip选项同步。
+     * 该选项可以在运行时通过 CONFIG  SET 进行设置，
      * 因此我们定期检查该选项是否已更改以将其反映到 myself->ip 中。
      * */
     {
@@ -4839,7 +4839,9 @@ void clusterCron(void) {
      * just the NODE_TIMEOUT value, but when NODE_TIMEOUT is too small we use
      * the value of 1 second. 
      *
-     * 握手超时是指从节点中删除未转换为正常节点的握手节点的时间。通常它只是NODE_TIMEOUT值，但当NODE_TIME OUT太小时，我们使用1秒的值。
+     * 握手超时是 「未转换为正常节点的握手节点」 在节点列表中删除的时间。
+     * 通常它只是NODE_TIMEOUT值，
+     * 但当NODE_TIME OUT太小时，我们使用1秒的值。
      * */
     handshake_timeout = server.cluster_node_timeout;
     if (handshake_timeout < 1000) handshake_timeout = 1000;
@@ -4848,6 +4850,7 @@ void clusterCron(void) {
      *
      * 更新我自己的标志。
      * */
+    // 这里主要是如果手动配置了不能从节点故障转移，就更新 myself->flags 标志
     clusterUpdateMyselfFlags();
 
     /* Check if we have disconnected nodes and re-establish the connection.
@@ -4865,7 +4868,7 @@ void clusterCron(void) {
         /* Not interested in reconnecting the link with myself or nodes
          * for which we have no address. 
          *
-         * 对重新连接我自己的链接或我们没有地址的节点不感兴趣。
+         * 对「我自己」或「我们没有地址的节点」不感兴趣。
          * */
         if (node->flags & (CLUSTER_NODE_MYSELF|CLUSTER_NODE_NOADDR)) continue;
 
@@ -4875,7 +4878,7 @@ void clusterCron(void) {
         /* A Node in HANDSHAKE state has a limited lifespan equal to the
          * configured node timeout. 
          *
-         * 处于HANDSHAKE状态的节点的有限寿命等于配置的节点超时。
+         * 处于HANDSHAKE状态的节点，但是握手超时了
          * */
         if (nodeInHandshake(node) && now - node->ctime > handshake_timeout) {
             clusterDelNode(node);
@@ -4953,8 +4956,9 @@ void clusterCron(void) {
      * 2) Count the max number of non failing slaves for a single master.
      * 3) Count the number of slaves for our master, if we are a slave. 
      *
-     * 迭代节点以检查是否需要将某些内容标记为失败。此循环还负责：
-     * 1） 检查是否存在孤立的主节点器（没有非故障从控器的主节点）。
+     * 迭代节点以检查是否需要将某些内容标记为失败。
+     * 此循环还负责：
+     * 1） 检查是否存在孤立的主节点器（没有非故障从节点的主节点）。
      * 2） 计算单个主设备的最大非故障从设备数量。
      * 3） 如果我们是从节点，请为主节点计算从节点的数量。
      * */
@@ -4976,7 +4980,7 @@ void clusterCron(void) {
         /* Orphaned master check, useful only if the current instance
          * is a slave that may migrate to another master. 
          *
-         * 孤立主机检查，仅当当前节点是可能迁移到另一个主机的从节点时才有用。
+         * 孤立主节点检查，仅当 当前节点 是可能迁移到另一个主节点的从节点时才有用。
          * */
         if (nodeIsSlave(myself) && nodeIsMaster(node) && !nodeFailed(node)) {
             int okslaves = clusterCountNonFailingSlaves(node);
@@ -5002,8 +5006,8 @@ void clusterCron(void) {
          * timeout, reconnect the link: maybe there is a connection
          * issue even if the node is alive. 
          *
-         * 如果我们在超过一半的集群超时时间内没有接收到任何数据，请重新连接链接：即使节点处
-         * 于活动状态，也可能存在连接问题。
+         * 如果我们在超过一半的集群超时时间内没有接收到任何数据，请重新连接链接：
+         * 即使节点处于活动状态，也可能存在连接问题。
          * */
         mstime_t ping_delay = now - node->ping_sent;
         mstime_t data_delay = now - node->data_received;
@@ -5022,7 +5026,7 @@ void clusterCron(void) {
                                 * */
             /* and we are waiting for the pong more than timeout/2 
              *
-             * 我们在等待乒乓球超过超时/2
+             * 我们在等待 pong 超过超时/2
              * */
             ping_delay > server.cluster_node_timeout/2 &&
             /* and in such interval we are not seeing any traffic at all. 
@@ -5084,10 +5088,12 @@ void clusterCron(void) {
          * our cluster bus link is also used for data: under heavy data
          * load pong delays are possible. 
          *
-         * 检查此节点是否看起来无法访问。请注意，如果我们已经收到PONG，那么node->ping_sent为零，
-         * 因此根本无法到达该代码，因此如果我们没有发送ping，我
-         * 们就不会有检查PONG延迟的风险。我们还将每个传入的数据都视为活跃性的证明，因为
-         * 我们的集群总线链路也用于数据：在重数据负载下，可能会出现pong延迟。
+         * 检查此节点是否看起来无法访问。
+         *
+         * 请注意，如果我们已经收到PONG，那么node->ping_sent为零，因此根本无法到达该代码，
+         * 因此如果我们没有发送ping，我们就不会有检查PONG延迟的风险。
+         *
+         * 我们还将每个传入的数据都视为活跃性的证明，因为我们的集群总线链路也用于数据：在重数据负载下，可能会出现pong延迟。
          * */
         mstime_t node_delay = (ping_delay < data_delay) ? ping_delay :
                                                           data_delay;
@@ -5112,8 +5118,8 @@ void clusterCron(void) {
      * enable it if we know the address of our master and it appears to
      * be up. 
      *
-     * 如果我们是从节点，但复制仍然关闭，那么如果我们知道主节点的地址并且它似乎已启动，
-     * 请启用它。
+     * 如果我们是从节点，但复制仍然关闭，
+     * 那么如果我们知道主节点的地址并且它似乎已启动，请启用它。
      * */
     if (nodeIsSlave(myself) &&
         server.masterhost == NULL &&
@@ -5140,7 +5146,7 @@ void clusterCron(void) {
          * slaves. 
          *
          * 如果有孤儿从节点，而我们是拥有最多未失败从节点的主节点中的从节点，请考虑迁移到孤儿主节点。
-         * 请注意，如果没有至少有两个工作从节点的主机，那么尝试迁移是没有意义的。
+         * 请注意，如果没有至少有两个工作从节点的主节点，那么尝试迁移是没有意义的。
          * */
         if (orphaned_masters && max_slaves >= 2 && this_slaves == max_slaves)
             clusterHandleSlaveMigration(max_slaves);
@@ -5164,7 +5170,7 @@ void clusterBeforeSleep(void) {
     /* Handle failover, this is needed when it is likely that there is already
      * the quorum from masters in order to react fast. 
      *
-     * 处理故障转移，当可能已经有来自主机的仲裁以便快速反应时，需要这样做。
+     * 处理故障转移，当可能已经有来自主节点的仲裁以便快速反应时，需要这样做。
      * */
     if (server.cluster->todo_before_sleep & CLUSTER_TODO_HANDLE_FAILOVER)
         clusterHandleSlaveFailover();
@@ -5240,7 +5246,7 @@ void bitmapClearBit(unsigned char *bitmap, int pos) {
  * MIGRATE_TO flag the when a master gets the first slot. 
  *
  * 如果群集中至少有一个具有从节点的主节点，则返回非零。否则返回零。clusterNodeSetSlotBit（）
- * 用于在主机获得第一个插槽时设置 MIGRATE_TO 标志。
+ * 用于在主节点获得第一个插槽时设置 MIGRATE_TO 标志。
  * */
 int clusterMastersHaveSlaves(void) {
     dictIterator *di = dictGetSafeIterator(server.cluster->nodes);
@@ -5279,11 +5285,11 @@ int clusterNodeSetSlotBit(clusterNode *n, int slot) {
          *
          * See https://github.com/antirez/redis/issues/3043 for more info. 
          *
-         * 当一个主机获得它的第一个插槽时，即使它没有从节点，它也会被标记为MIGRATE_TO，也就是说，
-         * 如果并且只有当其他主机中至少有一个现在有从节点时，该主机才是副本迁移的有效目标。
+         * 当一个主节点获得它的第一个插槽时，即使它没有从节点，它也会被标记为MIGRATE_TO，也就是说，
+         * 如果并且只有当其他主节点中至少有一个现在有从节点时，该主节点才是副本迁移的有效目标。
          * 通常，如果出现以下情况，则主节点形状成为复制副本迁移的有效目标：1。他
          * 们曾经有从节点（但现在没有了）。2.他们是从节点，辜负了曾经有从节点的主节点。但是，如果
-         * 集群的其余部分不是从节点，则分配了插槽的新主机被视为有效的迁移目标。看见https://github.com/antirez/redis/issues/3043
+         * 集群的其余部分不是从节点，则分配了插槽的新主节点被视为有效的迁移目标。看见https://github.com/antirez/redis/issues/3043
          * 了解更多信息。
          * */
         if (n->numslots == 1 && clusterMastersHaveSlaves())
@@ -5440,7 +5446,7 @@ void clusterUpdateState(void) {
      * at least one slot. 
      *
      * 计算集群大小，即至少为单个插槽提供服务的主节点的数量。同时，计算具有至少一个插槽
-     * 的可到达主机的数量。
+     * 的可到达主节点的数量。
      * */
     {
         dictIterator *di;
@@ -5551,7 +5557,7 @@ int verifyClusterConfigWithData(void) {
     /* Return ASAP if a module disabled cluster redirections. In that case
      * every master can store keys about every possible hash slot. 
      *
-     * 如果模块禁用了群集重定向，请尽快返回。在这种情况下，每个主机都可以存储关于每个可
+     * 如果模块禁用了群集重定向，请尽快返回。在这种情况下，每个主节点都可以存储关于每个可
      * 能的哈希槽的键。
      * */
     if (server.cluster_module_flags & CLUSTER_MODULE_FLAG_NO_REDIRECTION)
@@ -5887,7 +5893,7 @@ void clusterReplyMultiBulkSlots(client *c) {
         /* Skip slaves (that are iterated when producing the output of their
          * master) and  masters not serving any slot. 
          *
-         * 跳过从节点（在产生其主机的输出时迭代）和不为任何插槽服务的主机。
+         * 跳过从节点（在产生其主节点的输出时迭代）和不为任何插槽服务的主节点。
          * */
         if (!nodeIsMaster(node) || node->numslots == 0) continue;
 
@@ -6464,7 +6470,7 @@ NULL
 
         /* Set the master. 
          *
-         * 设置主机。
+         * 设置主节点。
          * */
         clusterSetMaster(n);
         clusterDoBeforeSleep(CLUSTER_TODO_UPDATE_STATE|CLUSTER_TODO_SAVE_CONFIG);
@@ -6572,7 +6578,7 @@ NULL
              * master to agree about the offset. We just failover taking over
              * it without coordination. 
              *
-             * 如果这是一个强制故障转移，我们不需要与我们的主机讨论偏移量。我们只是在没有协调的
+             * 如果这是一个强制故障转移，我们不需要与我们的主节点讨论偏移量。我们只是在没有协调的
              * 情况下进行故障切换。
              * */
             serverLog(LL_WARNING,"Forced failover user request accepted.");
@@ -7440,7 +7446,7 @@ try_again:
      * the original host/port in the ARGV. Later the original command may be
      * rewritten to DEL and will be too later. 
      *
-     * 关于套接字错误，现在ARGV中仍有原始主机/端口，请关闭迁移套接字。稍后，原始命
+     * 关于套接字错误，现在ARGV中仍有原始主节点/端口，请关闭迁移套接字。稍后，原始命
      * 令可能被重写为DEL，并且将太晚。
      * */
     if (socket_error) migrateCloseSocket(c->argv[1],c->argv[2]);
@@ -7534,7 +7540,7 @@ socket_err:
      * again. 
      *
      * 如果命令被重写为DEL，并且出现了套接字错误，那么我们已经提前关闭了套接字。虽然
-     * migrateCloseSocket（）是幂等的，但主机/端口参数现在已经不存在了，所以不要再这样做了。
+     * migrateCloseSocket（）是幂等的，但主节点/端口参数现在已经不存在了，所以不要再这样做了。
      * */
     if (!argv_rewritten) migrateCloseSocket(c->argv[1],c->argv[2]);
     zfree(newargv);
@@ -7592,7 +7598,7 @@ void askingCommand(client *c) {
  * with read-only commands to keys that are served by the slave's master. 
  *
  * READONLY命令用于客户端进入只读模式。在这种模式下，只要客户端使用只读命令
- * 访问从属主机提供的键，从属主机就不会重定向客户端。
+ * 访问从属主节点提供的键，从属主节点就不会重定向客户端。
  * */
 void readonlyCommand(client *c) {
     if (server.cluster_enabled == 0) {

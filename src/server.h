@@ -3536,7 +3536,7 @@ struct redisServer {
                                * */
     mstime_t cluster_node_timeout; /* Cluster node timeout. 
                                     *
-                                    * 群集节点超时。
+                                    * 群集节点超时。默认值 15000
                                     * */
     char *cluster_configfile; /* Cluster auto-generated config file name. 
                                *
@@ -3549,6 +3549,7 @@ struct redisServer {
     int cluster_migration_barrier; /* Cluster replicas migration barrier. 
                                     *
                                     * 群集复制副本迁移障碍。
+                                    * 意思是主节点最少要保留多少个从节点，其他的从节点才可以迁移，默认值是1
                                     * */
     int cluster_slave_validity_factor; /* Slave max data age for failover. 
                                         *
